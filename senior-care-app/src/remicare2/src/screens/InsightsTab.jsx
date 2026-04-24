@@ -61,7 +61,7 @@ function EmergencyBriefing() {
                         <span style={{ fontSize:10, background:"rgba(0,0,0,.12)", color:s.color, borderRadius:6, padding:"1px 7px" }}>{ev.source}</span>
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <span style={{ fontSize:11, fontWeight:700, color:s.color }}>신뢰도 {ev.confidence}%</span>
+                        <span style={{ fontSize:11, fontWeight:700, color:s.color }}>자세히 보기</span>
                         <span style={{ fontSize:10, color:s.color }}>{isOpen?"▲":"▼"}</span>
                       </div>
                     </div>
@@ -70,10 +70,7 @@ function EmergencyBriefing() {
                   {isOpen && (
                     <div style={{ background:T.bg3, padding:"12px 14px", borderTop:`1px solid ${s.border}`, animation:"fadeUp .2s ease both" }}>
                       <p style={{ fontSize:12, lineHeight:1.7, color:T.t2 }}>{ev.detail}</p>
-                      <div style={{ display:"flex", gap:8, marginTop:10 }}>
-                        <button style={{ flex:1, padding:"8px 0", borderRadius:T.r.sm, fontSize:11, fontWeight:700, background:s.bg, border:`1px solid ${s.border}`, color:s.color, cursor:"pointer" }}>복지사 공유</button>
-                        <button onClick={() => dismissEvent(ev.id)} style={{ flex:1, padding:"8px 0", borderRadius:T.r.sm, fontSize:11, fontWeight:600, background:T.bg4, border:`1px solid ${T.b2}`, color:T.t3, cursor:"pointer" }}>무시</button>
-                      </div>
+                      {/* 복지사 공유, 무시 버튼 삭제됨 */}
                     </div>
                   )}
                 </div>
@@ -82,53 +79,6 @@ function EmergencyBriefing() {
           </div>
         )
       }
-    </Card>
-  );
-}
-
-function SppbCard() {
-  const [open, setOpen] = useState(false);
-  const data = { total:8, max:12, items:[
-    { name:"균형 검사", score:3, max:4, note:"한발 서기 8초" },
-    { name:"보행 속도", score:2, max:4, note:"4m 걷기 6.2초" },
-    { name:"의자 앉기/서기", score:3, max:4, note:"5회 반복 14.3초" },
-  ]};
-  const sc = data.total>=10?T.green:data.total>=7?T.amber:T.red;
-  const lbl= data.total>=10?"낮은 위험":data.total>=7?"중간 위험":"높은 위험";
-  return (
-    <Card>
-      <SectionLabel>SPPB 보행 분석</SectionLabel>
-      <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:12 }}>
-        <ProgressRing value={data.total} max={data.max} size={72} stroke={6} color={sc} label={`/${data.max}`} />
-        <div style={{ flex:1 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-            <span style={{ fontSize:15, fontWeight:700, color:sc }}>{lbl}</span>
-            <Pill color={sc} size={10}>AI 분석</Pill>
-          </div>
-          <div style={{ fontSize:12, color:T.t2, lineHeight:1.6 }}>낙상 위험 중간 수준<br/>정형외과 방문 권장</div>
-          <div style={{ fontSize:10, color:T.t3, marginTop:4, fontFamily:"'DM Mono',monospace" }}>2026.04.07 측정</div>
-        </div>
-      </div>
-      <button onClick={() => setOpen(!open)} style={{ width:"100%", padding:"9px 0", borderRadius:T.r.sm, fontSize:12, fontWeight:600, cursor:"pointer", background:T.bg4, border:`1px solid ${T.b2}`, color:T.t2 }}>
-        {open ? "항목 접기" : "세부 항목 보기"}
-      </button>
-      {open && (
-        <div style={{ marginTop:12, display:"flex", flexDirection:"column", gap:10 }}>
-          <Divider />
-          {data.items.map(item => (
-            <div key={item.name}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:5 }}>
-                <span style={{ color:T.t2 }}>{item.name}</span>
-                <span style={{ fontWeight:700, color:sc }}>{item.score}/{item.max}</span>
-              </div>
-              <div style={{ height:4, background:T.bg4, borderRadius:99 }}>
-                <div style={{ width:`${item.score/item.max*100}%`, height:"100%", background:sc, borderRadius:99, boxShadow:`0 0 5px ${sc}55` }} />
-              </div>
-              <div style={{ fontSize:10, color:T.t3, marginTop:2 }}>{item.note}</div>
-            </div>
-          ))}
-        </div>
-      )}
     </Card>
   );
 }
@@ -197,7 +147,7 @@ export default function InsightsTab() {
       </Card>
 
       <EmergencyBriefing />
-      <SppbCard />
+      {/* SppbCard 삭제됨 */}
 
       <Button onClick={() => setShowSheet(true)} style={{ background:`linear-gradient(135deg,#0F6E56,#1D9E75)`, boxShadow:"0 4px 20px rgba(29,158,117,.35)", color:"#fff" }}>
         🏥 병원 진료용 PDF 리포트 발급

@@ -78,7 +78,7 @@ export default function LoginScreen({ onLogin, onGoSignup }) {
               color:T.t2, fontSize:13, fontWeight:600, cursor:"pointer",
               display:"flex", alignItems:"center", justifyContent:"center", gap:7,
             }}>
-              <span style={{ fontSize:15 }}>{icon}</span> {name}로 계속
+              <span style={{ fontSize:15 }}>{icon}</span>{name}로 계속
             </button>
           ))}
         </div>
