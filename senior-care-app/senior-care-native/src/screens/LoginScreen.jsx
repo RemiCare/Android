@@ -8,11 +8,16 @@ export default function LoginScreen({ onLogin, onGoSignup }) {
   const [email,  setEmail]  = useState("");
   const [pw,     setPw]     = useState("");
   const [showPw, setShowPw] = useState(false);
-  const { signIn, loading, error, setError } = useAuth();
+  const { signIn, demoLogin, loading, error, setError } = useAuth();
 
   const handleLogin = async () => {
     const ok = await signIn(email, pw);
     if (ok) onLogin();
+  };
+
+  const handleDemo = () => {
+    demoLogin();
+    onLogin();
   };
 
   return (
@@ -30,11 +35,12 @@ export default function LoginScreen({ onLogin, onGoSignup }) {
           </View>
 
           <View style={styles.bottomSection}>
-            <Input 
-              label="이메일" 
-              placeholder="example@email.com" 
-              value={email} 
-              onChangeText={text => { setEmail(text); setError(""); }} 
+            <Input
+              label="아이디"
+              placeholder="로그인 아이디 입력"
+              value={email}
+              onChangeText={text => { setEmail(text); setError(""); }}
+              autoCapitalize="none"
             />
             <Input
               label="비밀번호" 
@@ -62,6 +68,10 @@ export default function LoginScreen({ onLogin, onGoSignup }) {
             ) : null}
 
             <Button onPress={handleLogin} loading={loading}>로그인</Button>
+
+            <TouchableOpacity onPress={handleDemo} style={{ marginTop: 12, paddingVertical: 12, borderRadius: T.r.md, borderColor: T.b2, borderWidth: 1, alignItems: "center" }}>
+              <Text style={{ fontSize: 13, color: T.t3, fontWeight: "600" }}>데모로 시작하기</Text>
+            </TouchableOpacity>
 
             <View style={styles.dividerContainer}>
               <View style={styles.divider} />

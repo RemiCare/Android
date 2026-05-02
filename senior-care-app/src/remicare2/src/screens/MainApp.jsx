@@ -1,90 +1,279 @@
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator, SafeAreaView, Platform } from "react-native";
 import { T } from "../tokens";
 import { useEmergency } from "../hooks/useEmergency";
 import { useApp } from "../context/AppContext";
-import HomeTab      from "./HomeTab";
-import InsightsTab  from "./InsightsTab";
-import { CareTab, ProfileTab } from "./CareAndProfile";
+import HomeTab from "./HomeTab";
+import InsightsTab from "./InsightsTab";
+import SettingsTab from "./SettingsTab";
+import { ProfileTab } from "./CareAndProfile";
 
 const TABS = [
-  { id:"home",    icon:"⌂",  label:"홈" },
-  { id:"insight", icon:"↗",  label:"인사이트" },
-  { id:"care",    icon:"★",  label:"돌봄 연계" },
-  { id:"profile", icon:"👤", label:"내 정보" },
+  { id: "home", icon: "⌂", label: "홈" },
+  { id: "insight", icon: "↗", label: "인사이트" },
+  { id: "settings", icon: "⚙️", label: "설정" },
+  { id: "profile", icon: "👤", label: "내 정보" },
 ];
 
 function EmergencyModal({ status, onClose }) {
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", zIndex:400, display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ background:T.bg2, borderRadius:T.r.xl, padding:"32px 24px", width:320, textAlign:"center", border:`1px solid ${T.redDim}`, animation:"scaleIn .25s ease both" }}>
-        <div style={{ position:"relative", width:64, height:64, margin:"0 auto 18px" }}>
-          <div style={{ width:64, height:64, borderRadius:"50%", border:`3px solid ${T.red}`, borderTopColor:"transparent", animation:"spin .8s linear infinite", position:"absolute" }} />
-          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>📞</div>
-        </div>
-        <h3 style={{ fontSize:17, fontWeight:700, color:T.t1, marginBottom:8 }}>
-          {status === "connecting" ? "비상 통화 연결 중..." : "통화 연결됨"}
-        </h3>
-        <p style={{ fontSize:13, color:T.t3, marginBottom:22, lineHeight:1.6 }}>
-          {status === "connecting"
-            ? "홈캠 · 스피커 권한을 요청 중입니다.\n잠시 후 양방향 통화가 시작됩니다."
-            : "어머니와 양방향 통화 중입니다.\n마이크 아이콘을 눌러 음소거하세요."
-          }
-        </p>
-        <div style={{ display:"flex", gap:10 }}>
-          <button onClick={onClose} style={{ flex:1, padding:12, borderRadius:T.r.md, background:T.bg4, border:`1px solid ${T.b2}`, color:T.t2, fontSize:13, fontWeight:600, cursor:"pointer" }}>종료</button>
-          {status === "connected" && (
-            <button style={{ flex:1, padding:12, borderRadius:T.r.md, background:T.tealDim, border:`1px solid ${T.teal}55`, color:T.teal, fontSize:13, fontWeight:600, cursor:"pointer" }}>🔇 음소거</button>
-          )}
-        </div>
-      </div>
-    </div>
+    <Modal transparent animationType="fade" visible={true}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalIconContainer}>
+            <View style={styles.modalSpinner} />
+            <Text style={styles.modalIcon}>📞</Text>
+          </View>
+          <Text style={styles.modalTitle}>
+            {status === "connecting" ? "비상 통화 연결 중..." : "통화 연결됨"}
+          </Text>
+          <Text style={styles.modalDesc}>
+            {status === "connecting"
+              ? "홈캠 · 스피 권한을 요청 중입니다.\n잠시 후 양방향 통화가 시작됩니다."
+              : "어머니와 양방향 통화 중입니다.\n마이크 아이콘을 눌러 음소거하세요."}
+          </Text>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
+              <Text style={styles.modalCloseTxt}>종료</Text>
+            </TouchableOpacity>
+            {status === "connected" && (
+              <TouchableOpacity style={styles.modalMuteBtn}>
+                <Text style={styles.modalMuteTxt}>🔇 음소거</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
 export default function MainApp({ tab, setTab }) {
-  const { state }                                    = useApp();
+  const { state } = useApp();
   const { callOpen, callStatus, openCall, closeCall } = useEmergency();
 
   return (
-    <div style={{ maxWidth:420, margin:"0 auto", fontFamily:"'Outfit',sans-serif", background:T.bg1, minHeight:"100vh", display:"flex", flexDirection:"column" }}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.logoIcon}>
+            <Text style={{ fontSize: 17 }}>🌿</Text>
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>RemiCare</Text>
+            <Text style={styles.headerSubtitle}>
+              {state.elder.name} · {state.elder.address} · <Text style={{ color: T.green }}>● 연결됨</Text>
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={openCall} style={styles.emergencyBtn}>
+          <View style={styles.emergencyDot} />
+          <Text style={styles.emergencyTxt}>비상 통화</Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* Header */}
-      <div style={{ background:T.bg0, borderBottom:`1px solid ${T.b1}`, padding:"14px 18px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:11 }}>
-          <div style={{ width:34, height:34, borderRadius:10, background:T.tealDim, border:`1px solid ${T.teal}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17 }}>🌿</div>
-          <div>
-            <div style={{ fontSize:16, fontWeight:700, color:T.t1, letterSpacing:-.5 }}>RemiCare</div>
-            <div style={{ fontSize:11, color:T.t3 }}>
-              {state.elder.name} · {state.elder.address} · <span style={{ color:T.green }}>● 연결됨</span>
-            </div>
-          </div>
-        </div>
-        <button onClick={openCall} style={{ display:"flex", alignItems:"center", gap:7, background:T.redDim, color:T.red, border:`1px solid ${T.red}55`, borderRadius:99, padding:"8px 14px", fontSize:12, fontWeight:700, cursor:"pointer", animation:"pulseRed 2s infinite" }}>
-          <div style={{ width:7, height:7, borderRadius:"50%", background:T.red }} />
-          비상 통화
-        </button>
-      </div>
+      <View style={{ flex: 1 }}>
+        {tab === "home" && <HomeTab />}
+        {tab === "insight" && <InsightsTab />}
+        {tab === "settings" && <SettingsTab />}
+        {tab === "profile" && <ProfileTab />}
+      </View>
 
-      {/* Content */}
-      {tab === "home"    && <HomeTab />}
-      {tab === "insight" && <InsightsTab />}
-      {tab === "care"    && <CareTab />}
-      {tab === "profile" && <ProfileTab />}
-
-      {/* Tab Bar */}
-      <div style={{ display:"flex", background:T.bg0, borderTop:`1px solid ${T.b1}`, position:"sticky", bottom:0, zIndex:100 }}>
+      <View style={styles.tabBar}>
         {TABS.map(t => {
           const active = tab === t.id;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"10px 4px 8px", gap:4, cursor:"pointer", border:"none", background:"none", color:active?T.teal:T.t3 }}>
-              <div style={{ width:24, height:24, borderRadius:7, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, background:active?T.tealDim:"transparent", transition:"background .2s" }}>{t.icon}</div>
-              <span style={{ fontSize:10, fontWeight:active?700:400 }}>{t.label}</span>
-              {active && <div style={{ width:16, height:2, background:T.teal, borderRadius:99, marginTop:-2 }} />}
-            </button>
+            <TouchableOpacity key={t.id} onPress={() => setTab(t.id)} style={styles.tabItem}>
+              <View style={[styles.tabIconWrapper, active && { backgroundColor: T.tealDim }]}>
+                <Text style={[styles.tabIcon, { color: active ? T.teal : T.t3 }]}>{t.icon}</Text>
+              </View>
+              <Text style={[styles.tabLabel, { color: active ? T.teal : T.t3, fontWeight: active ? "700" : "400" }]}>{t.label}</Text>
+              {active && <View style={styles.activeIndicator} />}
+            </TouchableOpacity>
           );
         })}
-      </div>
+      </View>
 
       {callOpen && <EmergencyModal status={callStatus} onClose={closeCall} />}
-    </div>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: T.bg1,
+  },
+  header: {
+    backgroundColor: T.bg0,
+    borderBottomColor: T.b1,
+    borderBottomWidth: 1,
+    paddingHorizontal: 18,
+    paddingTop: Platform.OS === 'android' ? 30 : 14,
+    paddingBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+  },
+  logoIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: T.tealDim,
+    borderColor: `${T.teal}44`,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: T.t1,
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    color: T.t3,
+  },
+  emergencyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: T.redDim,
+    borderColor: `${T.red}55`,
+    borderWidth: 1,
+    borderRadius: 99,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  emergencyDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: T.red,
+  },
+  emergencyTxt: {
+    color: T.red,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: T.bg0,
+    borderTopColor: T.b1,
+    borderTopWidth: 1,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingTop: 10,
+    paddingBottom: 8,
+    gap: 4,
+  },
+  tabIconWrapper: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabIcon: {
+    fontSize: 14,
+  },
+  tabLabel: {
+    fontSize: 10,
+  },
+  activeIndicator: {
+    width: 16,
+    height: 2,
+    backgroundColor: T.teal,
+    borderRadius: 99,
+    marginTop: -2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,.75)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalContent: {
+    backgroundColor: T.bg2,
+    borderRadius: T.r.xl,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    width: 320,
+    alignItems: "center",
+    borderColor: T.redDim,
+    borderWidth: 1,
+  },
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    marginBottom: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalSpinner: {
+    position: "absolute",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderColor: T.red,
+    borderWidth: 3,
+    borderTopColor: "transparent",
+  },
+  modalIcon: {
+    fontSize: 24,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: T.t1,
+    marginBottom: 8,
+  },
+  modalDesc: {
+    fontSize: 13,
+    color: T.t3,
+    marginBottom: 22,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  modalCloseBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: T.r.md,
+    backgroundColor: T.bg4,
+    borderColor: T.b2,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  modalCloseTxt: {
+    color: T.t2,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  modalMuteBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: T.r.md,
+    backgroundColor: T.tealDim,
+    borderColor: `${T.teal}55`,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  modalMuteTxt: {
+    color: T.teal,
+    fontSize: 13,
+    fontWeight: "600",
+  }
+});

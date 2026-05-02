@@ -5,12 +5,13 @@ import { useEmergency } from "../hooks/useEmergency";
 import { useApp } from "../context/AppContext";
 import HomeTab from "./HomeTab";
 import InsightsTab from "./InsightsTab";
-import { CareTab, ProfileTab } from "./CareAndProfile";
+import SettingsTab from "./SettingsTab";
+import { ProfileTab } from "./CareAndProfile";
 
 const TABS = [
   { id: "home", icon: "⌂", label: "홈" },
   { id: "insight", icon: "↗", label: "인사이트" },
-  { id: "care", icon: "★", label: "돌봄 연계" },
+  { id: "settings", icon: "⚙️", label: "설정" },
   { id: "profile", icon: "👤", label: "내 정보" },
 ];
 
@@ -74,7 +75,7 @@ export default function MainApp({ tab, setTab }) {
       <View style={{ flex: 1 }}>
         {tab === "home" && <HomeTab />}
         {tab === "insight" && <InsightsTab />}
-        {tab === "care" && <CareTab />}
+        {tab === "settings" && <SettingsTab />}
         {tab === "profile" && <ProfileTab />}
       </View>
 

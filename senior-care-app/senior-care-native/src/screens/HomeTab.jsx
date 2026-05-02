@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, SafeAreaView } from "react-native";
+import React, { useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, SafeAreaView } from "react-native";
+import { WebView } from "react-native-webview";
 import { T } from "../tokens";
 import { Card, SectionLabel, Pill, ProgressRing, Divider, EmptyState } from "../components/UI";
 import { useVitals } from "../hooks/useVitals";
 import { useMedication } from "../hooks/useMedication";
+import { useTimeline } from "../hooks/useTimeline";
 import { useApp } from "../context/AppContext";
 
 // ── Vitals Card ───────────────────────────────────────────────────
@@ -45,13 +47,14 @@ function VitalsCard() {
 
 // ── Medication Card ───────────────────────────────────────────────
 function MedicationCard() {
-  const { meds, toggleTaken, stats, nextMed } = useMedication();
+  const { todayMeds, toggleTaken, stats, nextMed } = useMedication();
   const [open, setOpen] = useState(false);
+  const dayStr = ["일", "월", "화", "수", "목", "금", "토"][new Date().getDay()];
 
   return (
     <Card>
       <SectionLabel action={open ? "접기" : "상세보기"} onAction={() => setOpen(!open)}>
-        복약 관리
+        복약 관리 ({dayStr}요일)
       </SectionLabel>
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
@@ -70,31 +73,55 @@ function MedicationCard() {
       </View>
 
       {open && (
-        <View style={{ marginTop: 12, gap: 8 }}>
+        <View style={{ marginTop: 12 }}>
           <Divider />
-          {meds.map(med => (
-            <View key={med.id} style={{ backgroundColor: T.bg3, borderRadius: T.r.md, paddingVertical: 11, paddingHorizontal: 13 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: med.color }} />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: T.t1 }}>{med.name}</Text>
-              </View>
-              <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
-                {med.times.map((t, ti) => (
-                  <TouchableOpacity key={ti} onPress={() => toggleTaken(med.id, ti)} style={{
-                    flexDirection: "row", alignItems: "center", gap: 5,
-                    paddingVertical: 5, paddingHorizontal: 12, borderRadius: 99,
-                    backgroundColor: med.taken[ti] ? `${med.color}22` : T.bg4,
-                    borderColor: med.taken[ti] ? med.color : T.b2, borderWidth: 1,
-                  }}>
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: med.taken[ti] ? med.color : T.t3 }}>
-                      {med.taken[ti] ? "✓" : "○"} {t}
-                    </Text>
-                  </TouchableOpacity>
+          {todayMeds.length === 0 ? (
+            <EmptyState icon="💊" title="오늘 복약 없음" desc="설정 탭에서 요일을 확인하세요." />
+          ) : (() => {
+            const items = todayMeds
+              .flatMap(med => med.times.map((t, ti) => ({
+                key: `${med.id}-${ti}`, time: t,
+                name: med.name, color: med.color,
+                taken: med.taken[ti], medId: med.id, timeIndex: ti,
+              })))
+              .sort((a, b) => a.time.localeCompare(b.time));
+            return (
+              <View style={{ marginTop: 10 }}>
+                {items.map((item, i) => (
+                  <View key={item.key} style={{ flexDirection: "row", gap: 12, paddingBottom: i < items.length - 1 ? 13 : 0 }}>
+                    <View style={{ alignItems: "center", width: 38 }}>
+                      <Text style={{ fontSize: 10, color: T.t3 }}>{item.time}</Text>
+                      {i < items.length - 1 && <View style={{ flex: 1, width: 1, backgroundColor: T.b1, marginTop: 5 }} />}
+                    </View>
+                    <View style={{ marginTop: 3 }}>
+                      <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: item.taken ? item.color : T.t3 }} />
+                    </View>
+                    <View style={{ flex: 1, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+                      <View>
+                        <Text style={{ fontSize: 13, fontWeight: "500", color: T.t1, lineHeight: 18 }}>{item.name}</Text>
+                        <Text style={{ fontSize: 11, marginTop: 2, color: item.taken ? item.color : T.t3 }}>
+                          {item.taken ? "✓ 복용 완료" : "미복용"}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => toggleTaken(item.medId, item.timeIndex)}
+                        style={{
+                          paddingVertical: 4, paddingHorizontal: 12, borderRadius: 99,
+                          backgroundColor: item.taken ? `${item.color}22` : T.bg4,
+                          borderColor: item.taken ? item.color : T.b2, borderWidth: 1,
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: "600", color: item.taken ? item.color : T.t3 }}>
+                          {item.taken ? "✓" : "○"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 ))}
+                <Text style={{ fontSize: 11, color: T.t3, marginTop: 14 }}>* 복약 추가/수정은 설정 탭에서 가능합니다.</Text>
               </View>
-            </View>
-          ))}
-          <Text style={{ fontSize: 11, color: T.t3 }}>*  수동 보정</Text>
+            );
+          })()}
         </View>
       )}
     </Card>
@@ -103,11 +130,14 @@ function MedicationCard() {
 
 // ── HomeCam Card ──────────────────────────────────────────────────
 function HomeCamCard() {
+  const { state } = useApp();
   const [cameras, setCameras] = useState(["거실"]);
   const [cam, setCam] = useState("거실");
   const [live, setLive] = useState(true);
   const [motion, setMotion] = useState(true);
   const [full, setFull] = useState(false);
+
+  const feedUrl = state.aiServerUrl ? `${state.aiServerUrl}/video/feed` : null;
 
   const handleAddCamera = () => {
     Alert.prompt(
@@ -115,8 +145,8 @@ function HomeCamCard() {
       "추가할 홈캠의 위치를 입력하세요 (예: 안방, 마당):",
       [
         { text: "취소", style: "cancel" },
-        { 
-          text: "추가", 
+        {
+          text: "추가",
           onPress: (newName) => {
             if (!newName || newName.trim() === "") return;
             if (cameras.includes(newName)) {
@@ -131,24 +161,38 @@ function HomeCamCard() {
     );
   };
 
-  const CamView = ({ height = 220 }) => (
-    <View style={{ position: "relative", backgroundColor: "#060D1A", height }}>
-      <View style={{ position: "absolute", bottom: 0, width: "100%", height: "40%", backgroundColor: "rgba(255,255,255,0.03)" }} />
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        {live ? (
-          <Text style={{ color: "rgba(45,212,191,0.5)", fontSize: 18 }}>[카메라 피드 - {cam}]</Text>
-        ) : (
+  const CamView = ({ height = 220 }) => {
+    if (!live) {
+      return (
+        <View style={{ height, backgroundColor: "#060D1A", alignItems: "center", justifyContent: "center" }}>
           <Text style={{ color: T.t2, fontSize: 13 }}>연결 끊김</Text>
-        )}
-      </View>
-      {live && (
+        </View>
+      );
+    }
+    if (!feedUrl) {
+      return (
+        <View style={{ height, backgroundColor: "#060D1A", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <Text style={{ fontSize: 22 }}>📷</Text>
+          <Text style={{ color: T.t3, fontSize: 12 }}>AI 서버 주소 미설정</Text>
+          <Text style={{ color: T.t3, fontSize: 11 }}>설정 탭에서 주소를 입력해주세요.</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={{ height, backgroundColor: "#060D1A" }}>
+        <WebView
+          source={{ uri: feedUrl }}
+          style={{ flex: 1, backgroundColor: "#060D1A" }}
+          scrollEnabled={false}
+          onError={() => {}}
+        />
         <View style={{ position: "absolute", top: 10, left: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#E24B4A" }} />
-          <Text style={{ color: "rgba(255,255,255,0.9)", fontWeight: "bold", fontSize: 10 }}>REC</Text>
+          <Text style={{ color: "rgba(255,255,255,0.9)", fontWeight: "bold", fontSize: 10 }}>LIVE</Text>
         </View>
-      )}
-    </View>
-  );
+      </View>
+    );
+  };
 
   return (
     <>
@@ -218,126 +262,39 @@ function HomeCamCard() {
 
 // ── Timeline ──────────────────────────────────────────────────────
 function TimelineCard() {
-  const [timeline, setTimeline] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-
+  const { todayTimeline } = useTimeline();
   const dotColor = { done: T.green, warn: T.amber, wait: T.t3 };
   const dayStr = ["일", "월", "화", "수", "목", "금", "토"][new Date().getDay()];
 
-  useEffect(() => {
-    const fetchTimeline = async () => {
-      setIsLoading(true);
-      try {
-        await new Promise(res => setTimeout(res, 500));
-        const initialData = [
-          { id: 1, time: "08:00", label: "기상 및 아침 산책", status: "done", note: "완료" },
-          { id: 2, time: "10:00", label: "복지관 문화교실", status: "wait", note: "예정" },
-        ];
-        setTimeline(initialData);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTimeline();
-  }, []);
-
-  const handleAdd = () => {
-    const tempId = `temp_${Date.now()}`; 
-    setTimeline([...timeline, { id: tempId, time: "12:00", label: "새 일정", status: "wait", note: "예정" }]);
-  };
-
-  const handleRemove = (id) => {
-    Alert.alert("삭제", "이 일정을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      { text: "삭제", onPress: () => setTimeline(timeline.filter(item => item.id !== id)), style: "destructive" }
-    ]);
-  };
-
-  const handleChange = (id, field, value) => {
-    setTimeline(timeline.map(item => item.id === id ? { ...item, [field]: value } : item));
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await new Promise(res => setTimeout(res, 500));
-      setIsEditing(false);
-    } catch (error) {
-      Alert.alert("에러", "저장에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const sortedTimeline = [...timeline].sort((a, b) => a.time.localeCompare(b.time));
+  const sortedTimeline = [...todayTimeline].sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <Card>
-      <SectionLabel 
-        action={isLoading ? "로딩중..." : (isEditing ? (isSaving ? "저장 중..." : "저장") : "수정")} 
-        onAction={() => {
-          if (isLoading || isSaving) return;
-          if (isEditing) handleSave();
-          else setIsEditing(true);
-        }}
-      >
+      <SectionLabel>
         오늘의 일정 ({dayStr}요일)
       </SectionLabel>
 
-      {isLoading ? (
-        <View style={{ paddingVertical: 20, alignItems: "center" }}>
-          <Text style={{ fontSize: 12, color: T.t3 }}>데이터를 불러오는 중입니다...</Text>
-        </View>
-      ) : isEditing ? (
-        <View style={{ gap: 10, marginTop: 10 }}>
-          {sortedTimeline.map((item) => (
-            <View key={item.id} style={{ flexDirection: "row", gap: 8, alignItems: "center", backgroundColor: T.bg3, padding: 8, borderRadius: T.r.sm }}>
-              <TextInput 
-                value={item.time} 
-                onChangeText={(text) => handleChange(item.id, "time", text)}
-                style={{ backgroundColor: T.bg4, borderColor: T.b2, borderWidth: 1, color: T.t1, borderRadius: T.r.sm, padding: 4, width: 60, textAlign: "center" }}
-              />
-              <TextInput 
-                value={item.label} 
-                onChangeText={(text) => handleChange(item.id, "label", text)}
-                style={{ flex: 1, backgroundColor: T.bg4, borderColor: T.b2, borderWidth: 1, color: T.t1, borderRadius: T.r.sm, paddingVertical: 4, paddingHorizontal: 8, fontSize: 13 }}
-              />
-              <TouchableOpacity onPress={() => handleRemove(item.id)} style={{ padding: 4 }}>
-                <Text style={{ color: T.red, fontWeight: "700" }}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-          <TouchableOpacity onPress={handleAdd} style={{ marginTop: 4, padding: 8, backgroundColor: T.bg4, borderColor: T.teal, borderWidth: 1, borderStyle: "dashed", borderRadius: T.r.sm, alignItems: "center" }}>
-            <Text style={{ color: T.teal, fontSize: 12, fontWeight: "600" }}>+ 새 일정 추가</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={{ marginTop: 10 }}>
-          {sortedTimeline.length === 0 ? (
-            <EmptyState icon="🗓" title="일정 없음" desc="우측 상단의 수정을 눌러 일정을 추가하세요." />
-          ) : (
-            sortedTimeline.map((item, i) => (
-              <View key={item.id} style={{ flexDirection: "row", gap: 12, paddingBottom: i < sortedTimeline.length - 1 ? 13 : 0 }}>
-                <View style={{ alignItems: "center", width: 38 }}>
-                  <Text style={{ fontSize: 10, color: T.t3 }}>{item.time}</Text>
-                  {i < sortedTimeline.length - 1 && <View style={{ flex: 1, width: 1, backgroundColor: T.b1, marginTop: 5 }} />}
-                </View>
-                <View style={{ marginTop: 3 }}>
-                  <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: dotColor[item.status] || T.t3 }} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: "500", color: T.t1, lineHeight: 18 }}>{item.label}</Text>
-                  <Text style={{ fontSize: 11, marginTop: 2, color: item.status === "done" ? T.green : T.t3 }}>{item.note}</Text>
-                </View>
+      <View style={{ marginTop: 10 }}>
+        {sortedTimeline.length === 0 ? (
+          <EmptyState icon="🗓" title="일정 없음" desc="설정 탭에서 일정을 추가하세요." />
+        ) : (
+          sortedTimeline.map((item, i) => (
+            <View key={item.id} style={{ flexDirection: "row", gap: 12, paddingBottom: i < sortedTimeline.length - 1 ? 13 : 0 }}>
+              <View style={{ alignItems: "center", width: 38 }}>
+                <Text style={{ fontSize: 10, color: T.t3 }}>{item.time}</Text>
+                {i < sortedTimeline.length - 1 && <View style={{ flex: 1, width: 1, backgroundColor: T.b1, marginTop: 5 }} />}
               </View>
-            ))
-          )}
-        </View>
-      )}
+              <View style={{ marginTop: 3 }}>
+                <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: dotColor[item.status] || T.t3 }} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: "500", color: T.t1, lineHeight: 18 }}>{item.label}</Text>
+                <Text style={{ fontSize: 11, marginTop: 2, color: item.status === "done" ? T.green : T.t3 }}>{item.note}</Text>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
     </Card>
   );
 }

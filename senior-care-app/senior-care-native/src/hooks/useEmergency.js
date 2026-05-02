@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 
 export const EMERGENCY_HISTORY = [
@@ -16,16 +16,12 @@ export const SEV = {
 };
 
 export function useEmergency() {
-  const { setEmergency } = useApp();
-  const [callOpen,    setCallOpen]    = useState(false);
-  const [callStatus,  setCallStatus]  = useState("idle"); // idle | connecting | connected
-  const [filter,      setFilter]      = useState("all");
-  const [selectedId,  setSelectedId]  = useState(null);
-  const [dismissed,   setDismissed]   = useState([]);
-
-  const filtered = EMERGENCY_HISTORY.filter(e =>
-    !dismissed.includes(e.id) && (filter === "all" || e.severity === filter)
-  );
+  const { state, setEmergency } = useApp();
+  const [callOpen,   setCallOpen]   = useState(false);
+  const [callStatus, setCallStatus] = useState("idle");
+  const [filter,     setFilter]     = useState("all");
+  const [selectedId, setSelectedId] = useState(null);
+  const [dismissed,  setDismissed]  = useState([]);
 
   const openCall = useCallback(() => {
     setCallOpen(true);
@@ -33,6 +29,29 @@ export function useEmergency() {
     setEmergency(true);
     setTimeout(() => setCallStatus("connected"), 2000);
   }, [setEmergency]);
+
+  const callOpenRef = useRef(false);
+  callOpenRef.current = callOpen;
+
+  // AI 서버 낙상/화장실 감지 폴링 (3초마다)
+  useEffect(() => {
+    if (!state.aiServerUrl) return;
+    const interval = setInterval(async () => {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(`${state.aiServerUrl}/api/status`, { signal: controller.signal });
+        clearTimeout(timer);
+        if (res.ok) {
+          const data = await res.json();
+          if ((data.fall_detected || data.bathroom_alert) && !callOpenRef.current) {
+            callOpenRef.current();
+          }
+        }
+      } catch {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [state.aiServerUrl]);
 
   const closeCall = useCallback(() => {
     setCallOpen(false);
@@ -49,6 +68,9 @@ export function useEmergency() {
     setSelectedId(prev => prev === id ? null : id);
   }, []);
 
+  const filtered = EMERGENCY_HISTORY.filter(e =>
+    !dismissed.includes(e.id) && (filter === "all" || e.severity === filter)
+  );
   const highCount = EMERGENCY_HISTORY.filter(e => e.severity === "high").length;
 
   return {

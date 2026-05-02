@@ -39,6 +39,23 @@ const initialState = {
 
   // Emergency
   emergencyActive: false,
+
+  // AI Server (local)
+  aiServerUrl: "",
+
+  // Medication
+  meds: [
+    { id: 1, name: "혈압약 (암로디핀 5mg)", times: ["09:00"],         taken: [true],         color: "#2DD4BF", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+    { id: 2, name: "혈당약 (메트포르민)",   times: ["08:00", "20:00"], taken: [true, false],  color: "#60A5FA", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+    { id: 3, name: "비타민D",              times: ["12:00"],          taken: [false],        color: "#FBBF24", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+    { id: 4, name: "오메가3",              times: ["21:00"],          taken: [false],        color: "#C084FC", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+  ],
+
+  // Timeline
+  timeline: [
+    { id: "t1", time: "08:00", label: "기상 및 아침 산책", status: "done", note: "완료", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+    { id: "t2", time: "10:00", label: "복지관 문화교실",   status: "wait", note: "예정", days: ["mon","wed","fri"] },
+  ],
 };
 
 function reducer(state, action) {
@@ -63,6 +80,12 @@ function reducer(state, action) {
       return { ...state, unreadCount: 0 };
     case "UPDATE_DEVICE":
       return { ...state, device: { ...state.device, ...action.payload } };
+    case "SET_MEDS":
+      return { ...state, meds: action.payload };
+    case "SET_TIMELINE":
+      return { ...state, timeline: action.payload };
+    case "SET_AI_SERVER_URL":
+      return { ...state, aiServerUrl: action.payload };
     default:
       return state;
   }
@@ -91,8 +114,20 @@ export function AppProvider({ children }) {
     dispatch({ type: "ADD_NOTIFICATION", payload: { ...notif, id: Date.now(), time: new Date() } });
   }, []);
 
+  const setMeds = useCallback((meds) => {
+    dispatch({ type: "SET_MEDS", payload: meds });
+  }, []);
+
+  const setTimeline = useCallback((timeline) => {
+    dispatch({ type: "SET_TIMELINE", payload: timeline });
+  }, []);
+
+  const setAiServerUrl = useCallback((url) => {
+    dispatch({ type: "SET_AI_SERVER_URL", payload: url });
+  }, []);
+
   return (
-    <AppContext.Provider value={{ state, login, logout, updateVitals, setEmergency, addNotification }}>
+    <AppContext.Provider value={{ state, login, logout, updateVitals, setEmergency, addNotification, setMeds, setTimeline, setAiServerUrl }}>
       {children}
     </AppContext.Provider>
   );

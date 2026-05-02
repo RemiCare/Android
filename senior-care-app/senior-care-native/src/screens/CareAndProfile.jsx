@@ -1,101 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from "react-native";
 import { T } from "../tokens";
-import { Card, SectionLabel, Toggle, Divider, Button } from "../components/UI";
+import { Card, SectionLabel, Toggle, Button } from "../components/UI";
 import { useApp } from "../context/AppContext";
 import { useAuth } from "../hooks/useAuth";
 
-const CARE_BTNS = [
-  { icon: "💊", label: "약국 심부름", color: T.teal },
-  { icon: "🏃", label: "낙상 확인", color: T.red },
-  { icon: "💡", label: "전구 교체", color: T.amber },
-  { icon: "🔍", label: "방문 확인", color: T.blue },
-];
 
-function StepBar({ current }) {
-  const steps = ["요청", "매칭", "출동", "완료"];
-  return (
-    <View style={{ flexDirection: "row", alignItems: "flex-start", marginVertical: 12 }}>
-      {steps.map((lbl, i) => (
-        <View key={i} style={{ flexDirection: "row", alignItems: "center", flex: i < steps.length - 1 ? 1 : 0 }}>
-          <View style={{ alignItems: "center", gap: 4 }}>
-            <View style={{
-              width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center",
-              backgroundColor: i < current ? T.teal : i === current ? T.tealDim : "transparent",
-              borderColor: i < current ? T.teal : i === current ? T.teal : T.b2, borderWidth: 2,
-            }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: i < current ? T.bg0 : i === current ? T.teal : T.t3 }}>
-                {i < current ? "✓" : i + 1}
-              </Text>
-            </View>
-            <Text style={{ fontSize: 9, color: i === current ? T.teal : T.t3, fontWeight: i === current ? "600" : "400", textAlign: "center", width: 44 }}>
-              {lbl}
-            </Text>
-          </View>
-          {i < steps.length - 1 && (
-            <View style={{ flex: 1, height: 1.5, backgroundColor: i < current ? T.teal : T.b2, marginHorizontal: 3, marginBottom: 18 }} />
-          )}
-        </View>
-      ))}
-    </View>
-  );
-}
-
-export function CareTab() {
-  const [modal, setModal] = useState(null);
-  return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 14, paddingHorizontal: 14, paddingBottom: 90 }}>
-      <Text style={{ fontSize: 10, fontWeight: "700", color: T.t3, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: 10 }}>빠른 호출</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
-        {CARE_BTNS.map(btn => (
-          <TouchableOpacity key={btn.label} onPress={() => setModal(btn.label)} style={{
-            width: '48%', backgroundColor: T.bg2, borderColor: `${btn.color}22`, borderWidth: 1, borderRadius: T.r.lg,
-            paddingVertical: 18, paddingHorizontal: 14, alignItems: "center", gap: 10
-          }}>
-            <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: `${btn.color}18`, borderColor: `${btn.color}33`, borderWidth: 1, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontSize: 22 }}>{btn.icon}</Text>
-            </View>
-            <Text style={{ fontSize: 12, fontWeight: "600", textAlign: "center", color: T.t1 }}>{btn.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Card>
-        <SectionLabel>출동 현황</SectionLabel>
-        <StepBar current={1} />
-        <View style={{ backgroundColor: T.bg3, borderRadius: T.r.sm, paddingVertical: 10, paddingHorizontal: 14, borderColor: T.b1, borderWidth: 1 }}>
-          <Text style={{ fontSize: 12, color: T.t3 }}>약국 심부름 · 요양보호사 매칭 중...</Text>
-        </View>
-      </Card>
-
-      <Card>
-        <SectionLabel>지난 방문 결과</SectionLabel>
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
-          {[["💊", "혈압약 전달 완료", T.teal], ["💡", "형광등 교체 완료", T.amber]].map(([icon, cap, c]) => (
-            <View key={cap} style={{ flex: 1, backgroundColor: T.bg3, borderRadius: T.r.md, paddingVertical: 14, paddingHorizontal: 10, alignItems: "center", borderColor: `${c}22`, borderWidth: 1 }}>
-              <Text style={{ fontSize: 28, marginBottom: 7 }}>{icon}</Text>
-              <Text style={{ fontSize: 11, color: T.t2, fontWeight: "500" }}>{cap}</Text>
-            </View>
-          ))}
-        </View>
-        <Text style={{ fontSize: 12, color: T.t3, lineHeight: 18 }}>어머니께서 컨디션이 좋으셨습니다. 약 정리도 함께 도와드렸습니다.</Text>
-      </Card>
-
-      <Modal visible={!!modal} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,.6)", alignItems: "center", justifyContent: "center" }}>
-          <View style={{ backgroundColor: T.bg2, borderRadius: T.r.xl, paddingVertical: 28, paddingHorizontal: 24, width: 320, alignItems: "center", borderColor: T.b2, borderWidth: 1 }}>
-            <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: T.tealDim, borderColor: T.teal, borderWidth: 2, alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-              <Text style={{ fontSize: 22, color: T.teal }}>✓</Text>
-            </View>
-            <Text style={{ fontSize: 16, fontWeight: "700", color: T.t1, marginBottom: 8 }}>{modal} 요청 완료</Text>
-            <Text style={{ fontSize: 13, color: T.t3, marginBottom: 20, lineHeight: 20, textAlign: "center" }}>요양보호사 매칭을 시작합니다.{"\n"}잠시 후 연락이 드려집니다.</Text>
-            <Button onPress={() => setModal(null)} style={{ width: "100%" }}>확인</Button>
-          </View>
-        </View>
-      </Modal>
-    </ScrollView>
-  );
-}
 
 // ── ProfileTab ────────────────────────────────────────────────────
 function SettingRow({ icon, label, value, danger, onClick, right }) {
@@ -187,7 +97,6 @@ export function ProfileTab() {
       {/* App Settings */}
       <Card>
         <SectionLabel>앱 설정</SectionLabel>
-        <SettingRow icon="🔗" label="기기 연결 관리" value="웨어러블 · 홈캠 2대" onClick={() => {}} />
         <SettingRow icon="🔒" label="개인정보 보호" value="데이터 관리 및 동의" onClick={() => {}} />
         <SettingRow icon="💳" label="구독 플랜" value="프리미엄 · ₩79,000/월" onClick={() => {}} />
         <SettingRow icon="💬" label="고객센터 문의" onClick={() => {}} />
