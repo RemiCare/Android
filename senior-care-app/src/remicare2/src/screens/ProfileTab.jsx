@@ -128,6 +128,7 @@ export default function ProfileTab({ onLogout }) {
       {/* App settings */}
       <div style={card()}>
         <div style={{ fontSize: 10, fontWeight: 700, color: T.t3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>앱 설정</div>
+        <Row icon="🔗" label="기기 연결 관리"   value="웨어러블 · 홈캠 2대" onClick={() => {}} />
         <Row icon="🔒" label="개인정보 보호"     value="데이터 관리 및 동의" onClick={() => {}} />
         <Row icon="💳" label="구독 플랜"         value="프리미엄 · ₩79,000/월" onClick={() => {}} />
         <Row icon="📋" label="오픈소스 라이선스" onClick={() => {}} />

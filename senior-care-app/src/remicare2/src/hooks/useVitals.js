@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { BASE_URL } from "../constants";
+import { useApp } from "../context/AppContext";
 
 export function useVitals() {
+  const { state } = useApp();
   const [vitals, setVitals] = useState({
     heartRate:     72,
-    bloodPressure: "118/76",
+    steps:         0,
     oxygen:        98.4,
     status:        "normal",
     lastUpdated:   new Date(),
@@ -11,31 +14,47 @@ export function useVitals() {
   const [animated, setAnimated] = useState(false);
   const timerRef = useRef(null);
 
-  useEffect(() => {
-    // 실제 서비스: 웨어러블 WebSocket 연결
-    timerRef.current = setInterval(() => {
-      setVitals(prev => {
-        const hr  = Math.round(prev.heartRate + (Math.random() - 0.5) * 4);
-        const oxy = Math.round((prev.oxygen + (Math.random() - 0.5) * 0.4) * 10) / 10;
-        const clampedHr  = Math.max(58, Math.min(105, hr));
-        const clampedOxy = Math.max(94, Math.min(99.9, oxy));
-        const status =
-          clampedHr > 100 || clampedOxy < 95 ? "warning" :
-          clampedHr > 95  || clampedOxy < 96 ? "caution" : "normal";
-        return {
-          heartRate:     clampedHr,
-          bloodPressure: prev.bloodPressure,
-          oxygen:        clampedOxy,
-          status,
-          lastUpdated:   new Date(),
-        };
-      });
-      setAnimated(true);
-      setTimeout(() => setAnimated(false), 400);
-    }, 3500);
+  const fetchLatestVitals = useCallback(async () => {
+    // 로그인 상태가 아니거나 토큰이 없으면 절대 요청하지 않음
+    if (!state.isLoggedIn || !state.user?.token) {
+      return;
+    }
 
+    try {
+      const response = await fetch(`${BASE_URL}/api/vital/latest`, {
+        headers: {
+          "Authorization": `Bearer ${state.user.token}`
+        }
+      });
+      
+      // 401이나 403 에러가 나면 토큰 문제이므로 중단
+      if (response.status === 401 || response.status === 403) return;
+
+      const data = await response.json();
+      
+      if (response.ok && data.results && data.results[0]) {
+        const latest = data.results[0];
+        setVitals({
+          heartRate: latest.heartRate || 72,
+          steps: latest.steps || 0,
+          oxygen: latest.bloodOxygen || 98.4,
+          status: (latest.heartRate > 100 || latest.bloodOxygen < 95) ? "warning" : "normal",
+          lastUpdated: new Date(latest.timestamp || Date.now()),
+        });
+        setAnimated(true);
+        setTimeout(() => setAnimated(false), 400);
+      }
+    } catch (e) {
+      console.error("바이탈 조회 실패:", e);
+    }
+  }, [state.isLoggedIn, state.user?.token]);
+
+  useEffect(() => {
+    fetchLatestVitals();
+    // 10초마다 갱신
+    timerRef.current = setInterval(fetchLatestVitals, 10000);
     return () => clearInterval(timerRef.current);
-  }, []);
+  }, [fetchLatestVitals]);
 
   const statusColor = {
     normal:  "#34D399",
@@ -43,5 +62,5 @@ export function useVitals() {
     warning: "#F87171",
   }[vitals.status];
 
-  return { vitals, animated, statusColor };
+  return { vitals, animated, statusColor, refresh: fetchLatestVitals };
 }

@@ -26,7 +26,7 @@ function ChipSelect({ options, selected, onToggle }) {
 }
 
 export default function SignupScreen({ onDone, onBack }) {
-  const { signUp, loading } = useAuth();
+  const { signUp, loading, error, setError } = useAuth();
   const [step, setStep] = useState(0);
 
   const [form, setForm] = useState({
@@ -35,19 +35,38 @@ export default function SignupScreen({ onDone, onBack }) {
     elderName:"", elderAge:"", elderAddr:"", conditions:[],
   });
 
-  const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
+  const set = (key) => (e) => {
+    setForm(f => ({ ...f, [key]: e.target.value }));
+    setError(""); // 입력 시 에러 초기화
+  };
   const toggleCondition = (c) => setForm(f => ({
     ...f, conditions: f.conditions.includes(c) ? f.conditions.filter(x=>x!==c) : [...f.conditions, c]
   }));
 
-  const canNext = [
-    form.name && form.email && form.password,
-    form.phone && form.relation,
-    form.elderName && form.elderAddr,
-  ][step] || step === 3;
+  const isEmailValid = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isPhoneValid = (phone) => /^010-?\d{3,4}-?\d{4}$/.test(phone);
 
   const goNext = async () => {
-    if (step < 2) { setStep(s => s+1); return; }
+    setError("");
+
+    // 단계별 유효성 검사
+    if (step === 0) {
+      if (!form.name) return setError("이름을 입력해주세요.");
+      if (!form.email || !isEmailValid(form.email)) return setError("올바른 이메일 형식이 아닙니다.");
+      if (!form.password || form.password.length < 10) return setError("비밀번호는 10자 이상이어야 합니다.");
+    } else if (step === 1) {
+      if (!form.phone || !isPhoneValid(form.phone)) return setError("올바른 휴대폰 번호 형식이 아닙니다. (예: 010-1234-5678)");
+      if (!form.relation) return setError("어르신과의 관계를 선택해주세요.");
+    } else if (step === 2) {
+      if (!form.elderName) return setError("어르신 성함을 입력해주세요.");
+      if (!form.elderAddr) return setError("거주지 주소를 입력해주세요.");
+    }
+
+    if (step < 2) { 
+      setStep(s => s+1); 
+      return; 
+    }
+
     const ok = await signUp(form);
     if (ok) setStep(3);
   };
@@ -56,7 +75,7 @@ export default function SignupScreen({ onDone, onBack }) {
     <div style={{ minHeight:"100vh", background:T.bg0, display:"flex", flexDirection:"column" }}>
       <div style={{ display:"flex", alignItems:"center", padding:"56px 20px 20px", gap:12 }}>
         {step < 3 && (
-          <button onClick={step===0 ? onBack : () => setStep(s=>s-1)} style={{ width:38, height:38, borderRadius:T.r.md, background:T.bg3, border:`1px solid ${T.b2}`, color:T.t2, fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+          <button onClick={step===0 ? onBack : () => { setStep(s=>s-1); setError(""); }} style={{ width:38, height:38, borderRadius:T.r.md, background:T.bg3, border:`1px solid ${T.b2}`, color:T.t2, fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
         )}
         <div style={{ flex:1 }}>
           <div style={{ fontSize:11, color:T.t3, marginBottom:3 }}>{step < 3 ? `단계 ${step+1} / 3` : "완료"}</div>
@@ -72,13 +91,19 @@ export default function SignupScreen({ onDone, onBack }) {
 
       <div style={{ flex:1, padding:"0 24px", overflowY:"auto" }}>
 
+        {error && (
+          <div style={{ background:T.redDim, border:`1px solid rgba(248,113,113,.3)`, borderRadius:T.r.sm, padding:"10px 14px", fontSize:13, color:T.red, marginBottom:16 }}>
+            {error}
+          </div>
+        )}
+
         {step === 0 && (
           <div className="fade-up">
             <p style={{ fontSize:22, fontWeight:700, color:T.t1, marginBottom:6 }}>안녕하세요!</p>
             <p style={{ fontSize:14, color:T.t3, marginBottom:28 }}>계정을 만들어 부모님을 지켜드리세요.</p>
             <Input label="이름" placeholder="홍길동" value={form.name} onChange={set("name")} />
             <Input label="이메일" type="email" placeholder="example@email.com" value={form.email} onChange={set("email")} />
-            <Input label="비밀번호" type="password" placeholder="8자 이상" value={form.password} onChange={set("password")} hint="영문, 숫자, 특수문자 포함 8자 이상" />
+            <Input label="비밀번호" type="password" placeholder="10자 이상" value={form.password} onChange={set("password")} hint="영문, 숫자 혼합 10자 이상" />
           </div>
         )}
 
@@ -89,7 +114,7 @@ export default function SignupScreen({ onDone, onBack }) {
             <Input label="휴대폰 번호" type="tel" placeholder="010-0000-0000" value={form.phone} onChange={set("phone")} />
             <div style={{ marginBottom:14 }}>
               <div style={{ fontSize:12, fontWeight:600, color:T.t3, marginBottom:10, letterSpacing:.4 }}>어르신과의 관계</div>
-              <ChipSelect options={RELATIONS} selected={form.relation ? [form.relation] : []} onToggle={(r) => setForm(f=>({...f,relation:r}))} />
+              <ChipSelect options={RELATIONS} selected={form.relation ? [form.relation] : []} onToggle={(r) => { setForm(f=>({...f,relation:r})); setError(""); }} />
             </div>
           </div>
         )}
@@ -99,7 +124,10 @@ export default function SignupScreen({ onDone, onBack }) {
             <p style={{ fontSize:22, fontWeight:700, color:T.t1, marginBottom:6 }}>어르신 등록</p>
             <p style={{ fontSize:14, color:T.t3, marginBottom:24 }}>모니터링할 어르신의 정보를 입력해주세요.</p>
             <div style={{ display:"flex", justifyContent:"center", marginBottom:22 }}>
-              <div style={{ width:80, height:80, borderRadius:"50%", background:T.bg3, border:`2px dashed ${T.b2}`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", gap:4 }}>
+              <div 
+                onClick={() => alert("현재 사진 업로드 기능은 준비 중입니다. 기본 프로필로 가입이 진행됩니다.")}
+                style={{ width:80, height:80, borderRadius:"50%", background:T.bg3, border:`2px dashed ${T.b2}`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", gap:4 }}
+              >
                 <span style={{ fontSize:26 }}>👤</span>
                 <span style={{ fontSize:10, color:T.t3 }}>사진 추가</span>
               </div>
@@ -142,7 +170,7 @@ export default function SignupScreen({ onDone, onBack }) {
 
       <div style={{ padding:"16px 24px 40px" }}>
         {step < 3
-          ? <Button onClick={goNext} loading={loading} disabled={!canNext}>{step===2?"가입 완료":"다음"}</Button>
+          ? <Button onClick={goNext} loading={loading}>{step===2?"가입 완료":"다음"}</Button>
           : <Button onClick={onDone}>시작하기 →</Button>
         }
       </div>
