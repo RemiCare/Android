@@ -345,6 +345,28 @@ function AiServerSettings() {
   );
 }
 
+function ElderTabs() {
+  const { state, selectElder } = useApp();
+  const elders = state.elders || [];
+  if (elders.length <= 1) return null;
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+      {elders.map(e => {
+        const active = e.id === state.selectedElderId;
+        return (
+          <TouchableOpacity
+            key={e.id}
+            onPress={() => selectElder(e.id)}
+            style={{ paddingVertical: 5, paddingHorizontal: 14, borderRadius: 99, backgroundColor: active ? T.tealDim : T.bg3, borderColor: active ? T.teal : T.b2, borderWidth: 1 }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "600", color: active ? T.teal : T.t3 }}>{e.name}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 function MedicationSettings() {
   const { meds, addMed, removeMed } = useMedication();
   const [isAdding, setIsAdding] = useState(false);
@@ -383,6 +405,7 @@ function MedicationSettings() {
       <SectionLabel action={isAdding ? "취소" : "추가"} onAction={isAdding ? reset : () => setIsAdding(true)}>
         복약 설정
       </SectionLabel>
+      <ElderTabs />
 
       {isAdding && (
         <View style={{ backgroundColor: T.bg3, padding: 14, borderRadius: T.r.md, marginBottom: 12, borderColor: `${T.teal}66`, borderWidth: 1, gap: 12 }}>
@@ -493,6 +516,7 @@ function ScheduleSettings() {
       <SectionLabel action={isAdding ? "취소" : "추가"} onAction={isAdding ? reset : () => setIsAdding(true)}>
         일정 설정
       </SectionLabel>
+      <ElderTabs />
 
       {isAdding && (
         <View style={{ backgroundColor: T.bg3, padding: 14, borderRadius: T.r.md, marginBottom: 12, borderColor: `${T.teal}66`, borderWidth: 1, gap: 12 }}>

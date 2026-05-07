@@ -24,10 +24,21 @@ function SettingRow({ icon, label, value, danger, onClick, right }) {
 }
 
 export function ProfileTab() {
-  const { state } = useApp();
+  const { state, addElder, selectElder, removeElder } = useApp();
   const { signOut } = useAuth();
   const [notifs, setNotifs] = useState({ emergency: true, med: true, report: false });
   const [editOpen, setEdit] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newAge, setNewAge] = useState("");
+  const [newAddr, setNewAddr] = useState("");
+
+  function handleAddElder() {
+    if (!newName.trim()) return;
+    addElder({ name: newName.trim(), age: parseInt(newAge) || 0, address: newAddr.trim(), conditions: [], photo: null });
+    setNewName(""); setNewAge(""); setNewAddr("");
+    setAddOpen(false);
+  }
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 14, paddingHorizontal: 14, paddingBottom: 90 }}>
@@ -54,25 +65,30 @@ export function ProfileTab() {
       {/* Elder */}
       <Card>
         <SectionLabel>모니터링 중인 어르신</SectionLabel>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 13, paddingBottom: 14, borderBottomColor: T.b1, borderBottomWidth: 1 }}>
-          <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: T.bg3, borderColor: T.b2, borderWidth: 2, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontSize: 22 }}>👩</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: T.t1 }}>{state.elder.name}</Text>
-            <Text style={{ fontSize: 12, color: T.t3, marginTop: 2 }}>{state.elder.age}세 · {state.elder.address}</Text>
-            <View style={{ flexDirection: "row", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
-              {state.elder.conditions.map(c => (
-                <Text key={c} style={{ fontSize: 10, backgroundColor: T.bg4, color: T.t3, borderRadius: 99, paddingVertical: 2, paddingHorizontal: 8, borderColor: T.b1, borderWidth: 1, overflow: "hidden" }}>{c}</Text>
-              ))}
+        {(state.elders || [state.elder]).map((e, idx) => {
+          const isSelected = e.id === state.selectedElderId;
+          return (
+            <View key={e.id} style={{ flexDirection: "row", alignItems: "center", gap: 13, paddingVertical: 12, borderBottomColor: T.b1, borderBottomWidth: 1 }}>
+              <TouchableOpacity onPress={() => selectElder(e.id)} style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: isSelected ? T.tealDim : T.bg3, borderColor: isSelected ? T.teal : T.b2, borderWidth: 2, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 22 }}>👩</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => selectElder(e.id)} style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: isSelected ? T.teal : T.t1 }}>{e.name}</Text>
+                  {isSelected && <Text style={{ fontSize: 10, fontWeight: "700", backgroundColor: T.tealDim, color: T.teal, borderRadius: 99, paddingVertical: 2, paddingHorizontal: 8, overflow: "hidden" }}>모니터링 중</Text>}
+                </View>
+                <Text style={{ fontSize: 12, color: T.t3, marginTop: 2 }}>{e.age}세 · {e.address}</Text>
+              </TouchableOpacity>
+              {(state.elders || []).length > 1 && (
+                <TouchableOpacity onPress={() => removeElder(e.id)} style={{ padding: 8 }}>
+                  <Text style={{ color: T.red, fontSize: 18 }}>×</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          </View>
-          <TouchableOpacity style={{ backgroundColor: T.bg3, borderColor: T.b2, borderWidth: 1, borderRadius: T.r.sm, paddingVertical: 7, paddingHorizontal: 12 }}>
-            <Text style={{ color: T.t2, fontSize: 12, fontWeight: "600" }}>편집</Text>
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity style={{ width: "100%", marginTop: 12, paddingVertical: 10, borderRadius: T.r.sm, borderColor: T.b2, borderWidth: 1, borderStyle: "dashed", alignItems: "center" }}>
-          <Text style={{ color: T.t3, fontSize: 13, fontWeight: "600" }}>+ 어르신 추가하기</Text>
+          );
+        })}
+        <TouchableOpacity onPress={() => setAddOpen(true)} style={{ width: "100%", marginTop: 12, paddingVertical: 10, borderRadius: T.r.sm, borderColor: T.teal, borderWidth: 1, borderStyle: "dashed", alignItems: "center" }}>
+          <Text style={{ color: T.teal, fontSize: 13, fontWeight: "600" }}>+ 어르신 추가하기</Text>
         </TouchableOpacity>
       </Card>
 
@@ -109,6 +125,34 @@ export function ProfileTab() {
           <SettingRow icon="⚠️" label="계정 탈퇴" danger onClick={() => {}} />
         </View>
       </Card>
+
+      <Modal visible={addOpen} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,.65)", justifyContent: "flex-end" }}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setAddOpen(false)} />
+          <View style={{ backgroundColor: T.bg2, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingVertical: 22, paddingHorizontal: 22, paddingBottom: 40, borderColor: T.b2, borderWidth: 1 }}>
+            <View style={{ width: 36, height: 4, backgroundColor: T.b2, borderRadius: 99, alignSelf: "center", marginBottom: 20 }} />
+            <Text style={{ fontSize: 16, fontWeight: "700", color: T.t1, marginBottom: 18 }}>어르신 추가</Text>
+            {[
+              { label: "이름", value: newName, setter: setNewName, placeholder: "예) 김순자" },
+              { label: "나이", value: newAge, setter: setNewAge, placeholder: "예) 78", keyboardType: "numeric" },
+              { label: "주소", value: newAddr, setter: setNewAddr, placeholder: "예) 서울 마포구" },
+            ].map(f => (
+              <View key={f.label} style={{ marginBottom: 12 }}>
+                <Text style={{ fontSize: 11, fontWeight: "600", color: T.t3, marginBottom: 6 }}>{f.label}</Text>
+                <TextInput
+                  style={{ backgroundColor: T.bg3, borderColor: T.b2, borderWidth: 1, borderRadius: T.r.sm, paddingVertical: 12, paddingHorizontal: 14, fontSize: 14, color: T.t1 }}
+                  placeholder={f.placeholder}
+                  placeholderTextColor={T.t3}
+                  value={f.value}
+                  onChangeText={f.setter}
+                  keyboardType={f.keyboardType || "default"}
+                />
+              </View>
+            ))}
+            <Button onPress={handleAddElder} style={{ marginTop: 8 }}>추가하기</Button>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={editOpen} transparent animationType="slide">
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,.65)", justifyContent: "flex-end" }}>
