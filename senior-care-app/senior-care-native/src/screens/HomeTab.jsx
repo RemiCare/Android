@@ -23,8 +23,8 @@ function VitalsCard() {
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
           {[
-            { val: vitals.heartRate, unit: "bpm", label: "심박수", color: T.green, icon: "♥" },
-            { val: vitals.steps || "5,432", unit: "걸음", label: "걸음수", color: T.blue, icon: "👣" },
+            { val: vitals.heartRate, unit: "bpm", label: "심박수", color: "#F06292", icon: "♥" },
+            { val: vitals.steps || "5,432", unit: "걸음", label: "걸음수", color: T.green, icon: "◆" },
             { val: vitals.oxygen, unit: "%", label: "혈중산소", color: T.teal, icon: "◎" },
           ].map(v => (
             <View key={v.label} style={{ flex: 1, backgroundColor: T.bg3, borderRadius: T.r.md, paddingVertical: 11, paddingHorizontal: 10 }}>
@@ -164,14 +164,14 @@ function HomeCamCard() {
   const CamView = ({ height = 220 }) => {
     if (!live) {
       return (
-        <View style={{ height, backgroundColor: "#060D1A", alignItems: "center", justifyContent: "center" }}>
+        <View style={{ height, backgroundColor: "#E8E8E8", alignItems: "center", justifyContent: "center" }}>
           <Text style={{ color: T.t2, fontSize: 13 }}>연결 끊김</Text>
         </View>
       );
     }
     if (!feedUrl) {
       return (
-        <View style={{ height, backgroundColor: "#060D1A", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <View style={{ height, backgroundColor: "#E8E8E8", alignItems: "center", justifyContent: "center", gap: 6 }}>
           <Text style={{ fontSize: 22 }}>📷</Text>
           <Text style={{ color: T.t3, fontSize: 12 }}>AI 서버 주소 미설정</Text>
           <Text style={{ color: T.t3, fontSize: 11 }}>설정 탭에서 주소를 입력해주세요.</Text>
@@ -179,10 +179,10 @@ function HomeCamCard() {
       );
     }
     return (
-      <View style={{ height, backgroundColor: "#060D1A" }}>
+      <View style={{ height, backgroundColor: "#E8E8E8" }}>
         <WebView
           source={{ uri: feedUrl }}
-          style={{ flex: 1, backgroundColor: "#060D1A" }}
+          style={{ flex: 1, backgroundColor: "#E8E8E8" }}
           scrollEnabled={false}
           onError={() => {}}
         />
@@ -247,7 +247,7 @@ function HomeCamCard() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderTopColor: T.b1, borderTopWidth: 1, paddingBottom: 24, flexDirection: "row", maxHeight: 60 }}>
             {cameras.map(loc => (
               <TouchableOpacity key={loc} onPress={() => setCam(loc)} style={{ paddingVertical: 12, paddingHorizontal: 16, borderTopColor: cam === loc ? T.teal : "transparent", borderTopWidth: 2 }}>
-                <Text style={{ fontSize: 12, fontWeight: cam === loc ? "700" : "400", color: cam === loc ? T.teal : "rgba(255,255,255,.35)" }}>{loc}</Text>
+                <Text style={{ fontSize: 12, fontWeight: cam === loc ? "700" : "400", color: cam === loc ? T.teal : "rgba(0,0,0,.4)" }}>{loc}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity onPress={handleAddCamera} style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
@@ -307,7 +307,7 @@ export default function HomeTab() {
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 14, paddingHorizontal: 14, paddingBottom: 90 }}>
       {/* AI Summary */}
       <View style={{
-        backgroundColor: '#0A2A24', // Use a solid fallback or simple gradient equivalent
+        backgroundColor: '#EEF2FF',
         borderRadius: T.r.xl, borderColor: `${T.teal}30`, borderWidth: 1,
         paddingVertical: 18, paddingHorizontal: 20, marginBottom: 12, overflow: "hidden",
       }}>
@@ -320,8 +320,8 @@ export default function HomeTab() {
           <Text style={{ fontSize: 11, fontWeight: "700", color: T.teal, letterSpacing: 1, textTransform: "uppercase" }}>AI 요약</Text>
           <Pill color={T.teal} style={{ marginLeft: "auto", fontSize: 10 }}>실시간</Pill>
         </View>
-        <Text style={{ fontSize: 14, lineHeight: 24, color: T.tealText }}>
-          <Text style={{ color: T.teal, fontWeight: "bold" }}>{state.elder.name}</Text> 님은 현재 평온한 상태이며,
+        <Text style={{ fontSize: 14, lineHeight: 24, color: T.t1 }}>
+          <Text style={{ color: T.t1, fontWeight: "bold" }}>{state.elder.name}</Text> 님은 현재 평온한 상태이며,
           아침 약 복용을 완료하셨습니다. 오늘 활동량은 평균 수준입니다.
         </Text>
       </View>

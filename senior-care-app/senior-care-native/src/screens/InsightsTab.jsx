@@ -64,17 +64,17 @@ function EmergencyBriefing() {
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                       <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: s.color }} />
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: s.color }}>{ev.type}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: T.t1 }}>{ev.type}</Text>
                       <View style={{ backgroundColor: "rgba(0,0,0,.12)", borderRadius: 6, paddingVertical: 1, paddingHorizontal: 7 }}>
-                        <Text style={{ fontSize: 10, color: s.color }}>{ev.source}</Text>
+                        <Text style={{ fontSize: 10, color: T.t2 }}>{ev.source}</Text>
                       </View>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: s.color }}>자세히 보기</Text>
-                      <Text style={{ fontSize: 10, color: s.color }}>{isOpen ? "▲" : "▼"}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: T.t2 }}>자세히 보기</Text>
+                      <Text style={{ fontSize: 10, color: T.t3 }}>{isOpen ? "▲" : "▼"}</Text>
                     </View>
                   </View>
-                  <Text style={{ fontSize: 10, color: s.color, opacity: 0.7, marginTop: 3 }}>{ev.date}</Text>
+                  <Text style={{ fontSize: 10, color: T.t3, marginTop: 3 }}>{ev.date}</Text>
                 </TouchableOpacity>
                 {isOpen && (
                   <View style={{ backgroundColor: T.bg3, paddingVertical: 12, paddingHorizontal: 14, borderTopColor: s.border, borderTopWidth: 1 }}>
@@ -159,7 +159,7 @@ export default function InsightsTab() {
           <Text>⚠</Text>
           <Text style={{ fontSize: 11, fontWeight: "700", color: T.amber, letterSpacing: 0.8 }}>AI 건강 지침</Text>
         </View>
-        <Text style={{ fontSize: 13, lineHeight: 22, color: "#D97706" }}>
+        <Text style={{ fontSize: 13, lineHeight: 22, color: T.t1 }}>
           최근 2주간 <Text style={{ fontWeight: "bold" }}>외출 빈도 80% 감소</Text>, 낮잠 시간 증가. 가벼운 우울감이나 관절 통증이 원인일 수 있습니다. 이번 주말 산책을 권해 보세요.
         </Text>
       </View>
@@ -181,8 +181,8 @@ export default function InsightsTab() {
 
       <EmergencyBriefing />
 
-      <Button onPress={() => setShowSheet(true)} style={{ backgroundColor: '#0F6E56', marginTop: 10 }}>
-        <Text style={{ color: '#fff', fontWeight: 'bold' }}>🏥 병원 진료용 PDF 리포트 발급</Text>
+      <Button onPress={() => setShowSheet(true)} style={{ marginTop: 10 }}>
+        🏥 병원 진료용 PDF 리포트 발급
       </Button>
 
       <Modal visible={showSheet} transparent animationType="slide" onRequestClose={() => setShowSheet(false)}>

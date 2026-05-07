@@ -26,9 +26,9 @@ export default function LoginScreen({ onLogin, onGoSignup }) {
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
           <View style={styles.topSection}>
             <View style={styles.logoContainer}>
-              <Image 
-                source={require('./RemiCare.png')} 
-                style={styles.logo} 
+              <Image
+                source={require('./RemiCare.png')}
+                style={styles.logo}
               />
             </View>
             <Text style={styles.subtitle}>RemiCare에 로그인하세요</Text>
@@ -43,10 +43,10 @@ export default function LoginScreen({ onLogin, onGoSignup }) {
               autoCapitalize="none"
             />
             <Input
-              label="비밀번호" 
-              secureTextEntry={!showPw} 
+              label="비밀번호"
+              secureTextEntry={!showPw}
               placeholder="••••••••"
-              value={pw} 
+              value={pw}
               onChangeText={text => { setPw(text); setError(""); }}
               rightEl={
                 <TouchableOpacity onPress={() => setShowPw(!showPw)}>
@@ -103,7 +103,7 @@ export default function LoginScreen({ onLogin, onGoSignup }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D2E2A',
+    backgroundColor: '#F5F5F5',
   },
   topSection: {
     flex: 1,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 22,
     backgroundColor: T.tealDim,
-    borderColor: 'rgba(45,212,191,.4)',
+    borderColor: 'rgba(92,124,250,.4)',
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",

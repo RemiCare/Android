@@ -19,9 +19,9 @@ export default function SplashScreen({ onDone }) {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.logoContainer, { opacity: fadeAnim }]}>
-        <Image 
-          source={require('./RemiCare.png')} 
-          style={styles.logo} 
+        <Image
+          source={require('./RemiCare.png')}
+          style={styles.logo}
         />
       </Animated.View>
       <Animated.Text style={[styles.title, { opacity: fadeAnim }]}>
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 26,
     backgroundColor: T.tealDim,
-    borderColor: 'rgba(45,212,191,.45)',
+    borderColor: 'rgba(92,124,250,.45)',
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",

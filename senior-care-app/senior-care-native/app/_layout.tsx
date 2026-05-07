@@ -36,7 +36,7 @@ function RootNavigator() {
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       {screen === "splash" && <SplashScreen onDone={handleSplashDone} />}
       {screen === "onboarding" && <OnboardingScreen onDone={handleOnboardingDone} />}
       {screen === "login" && (

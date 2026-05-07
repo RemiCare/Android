@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator, SafeAreaView, Platform } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator, SafeAreaView, Platform, Image } from "react-native";
 import { T } from "../tokens";
 import { useEmergency } from "../hooks/useEmergency";
 import { useApp } from "../context/AppContext";
@@ -11,8 +11,8 @@ import { ProfileTab } from "./CareAndProfile";
 const TABS = [
   { id: "home", icon: "⌂", label: "홈" },
   { id: "insight", icon: "↗", label: "인사이트" },
-  { id: "settings", icon: "⚙️", label: "설정" },
-  { id: "profile", icon: "👤", label: "내 정보" },
+  { id: "settings", icon: "⊕", label: "설정" },
+  { id: "profile", icon: "◉", label: "내 정보" },
 ];
 
 function EmergencyModal({ status, onClose }) {
@@ -57,7 +57,7 @@ export default function MainApp({ tab, setTab }) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.logoIcon}>
-            <Text style={{ fontSize: 17 }}>🌿</Text>
+            <Image source={require('./RemiCare.png')} style={{ width: 26, height: 26, borderRadius: 7 }} />
           </View>
           <View>
             <Text style={styles.headerTitle}>RemiCare</Text>
