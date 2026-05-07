@@ -200,7 +200,7 @@ export function Divider({ marginVertical = 10 }) {
 export function EmptyState({ icon, title, desc }) {
   return (
     <View style={{ alignItems: "center", paddingVertical: 32, paddingHorizontal: 20 }}>
-      <View style={{ opacity: 0.5, marginBottom: 10 }}>{icon}</View>
+      <Text style={{ fontSize: 32, opacity: 0.5, marginBottom: 10 }}>{icon}</Text>
       <Text style={{ fontSize: 16, fontWeight: "600", color: T.t2, marginBottom: 6 }}>{title}</Text>
       {desc && <Text style={{ fontSize: 13, color: T.t3, textAlign: "center", lineHeight: 20 }}>{desc}</Text>}
     </View>
