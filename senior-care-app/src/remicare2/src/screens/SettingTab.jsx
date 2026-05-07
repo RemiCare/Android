@@ -454,7 +454,6 @@ export default function SettingsTab() {
         설정
       </Text>
 
-      <ElderManagement />
       <WearableSettings />
       <MedicationSettings />
       <ScheduleSettings />

@@ -95,10 +95,27 @@ function SettingRow({ icon, label, value, danger, onClick, right }) {
 }
 
 export function ProfileTab() {
-  const { state }            = useApp();
+  const { state, addElder, removeElder, selectElder } = useApp();
   const { signOut }          = useAuth();
   const [notifs, setNotifs]  = useState({ emergency:true, med:true, report:false });
   const [editOpen,setEdit]   = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newAge,  setNewAge]  = useState("");
+  const [newAddr, setNewAddr] = useState("");
+
+  const handleAddElder = () => {
+    if (!newName.trim()) return;
+    addElder({
+      name: newName.trim(),
+      age: parseInt(newAge) || 70,
+      address: newAddr.trim() || "미입력",
+      conditions: [],
+      photo: null,
+    });
+    setNewName(""); setNewAge(""); setNewAddr("");
+    setAddOpen(false);
+  };
 
   return (
     <div style={{ padding:"14px 14px 90px", overflowY:"auto", flex:1 }} className="tab-content">
@@ -122,20 +139,32 @@ export function ProfileTab() {
       {/* Elder */}
       <Card>
         <SectionLabel>모니터링 중인 어르신</SectionLabel>
-        <div style={{ display:"flex", alignItems:"center", gap:13, paddingBottom:14, borderBottom:`1px solid ${T.b1}` }}>
-          <div style={{ width:50, height:50, borderRadius:"50%", background:T.bg3, border:`2px solid ${T.b2}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>👩</div>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:15, fontWeight:700, color:T.t1 }}>{state.elder.name}</div>
-            <div style={{ fontSize:12, color:T.t3, marginTop:2 }}>{state.elder.age}세 · {state.elder.address}</div>
-            <div style={{ display:"flex", gap:5, marginTop:6, flexWrap:"wrap" }}>
-              {state.elder.conditions.map(c => (
-                <span key={c} style={{ fontSize:10, background:T.bg4, color:T.t3, borderRadius:99, padding:"2px 8px", border:`1px solid ${T.b1}` }}>{c}</span>
-              ))}
+        {state.elders.map(elder => {
+          const active = elder.id === state.selectedElderId;
+          return (
+            <div key={elder.id} onClick={() => selectElder(elder.id)} style={{ display:"flex", alignItems:"center", gap:13, paddingBottom:14, marginBottom:14, borderBottom:`1px solid ${T.b1}`, cursor:"pointer", opacity: active ? 1 : 0.5 }}>
+              <div style={{ width:50, height:50, borderRadius:"50%", background: active ? T.tealDim : T.bg3, border:`2px solid ${active ? T.teal : T.b2}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>👩</div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ fontSize:15, fontWeight:700, color:T.t1 }}>{elder.name}</span>
+                  {active && <span style={{ fontSize:10, fontWeight:600, background:T.tealDim, color:T.teal, borderRadius:99, padding:"2px 8px", border:`1px solid ${T.tealBorder}` }}>선택됨</span>}
+                </div>
+                <div style={{ fontSize:12, color:T.t3, marginTop:2 }}>{elder.age}세 · {elder.address}</div>
+                {elder.conditions.length > 0 && (
+                  <div style={{ display:"flex", gap:5, marginTop:6, flexWrap:"wrap" }}>
+                    {elder.conditions.map(c => (
+                      <span key={c} style={{ fontSize:10, background:T.bg4, color:T.t3, borderRadius:99, padding:"2px 8px", border:`1px solid ${T.b1}` }}>{c}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {state.elders.length > 1 && (
+                <button onClick={e => { e.stopPropagation(); removeElder(elder.id); }} style={{ background:T.redDim, border:`1px solid rgba(224,85,85,0.3)`, borderRadius:T.r.sm, padding:"7px 12px", color:T.red, fontSize:12, fontWeight:600, cursor:"pointer" }}>삭제</button>
+              )}
             </div>
-          </div>
-          <button style={{ background:T.bg3, border:`1px solid ${T.b2}`, borderRadius:T.r.sm, padding:"7px 12px", color:T.t2, fontSize:12, fontWeight:600, cursor:"pointer" }}>편집</button>
-        </div>
-        <button style={{ width:"100%", marginTop:12, padding:"10px 0", borderRadius:T.r.sm, background:"none", border:`1px dashed ${T.b2}`, color:T.t3, fontSize:13, fontWeight:600, cursor:"pointer" }}>
+          );
+        })}
+        <button onClick={() => setAddOpen(true)} style={{ width:"100%", marginTop:4, padding:"10px 0", borderRadius:T.r.sm, background:"none", border:`1px dashed ${T.b2}`, color:T.t3, fontSize:13, fontWeight:600, cursor:"pointer" }}>
           + 어르신 추가하기
         </button>
       </Card>
@@ -174,6 +203,28 @@ export function ProfileTab() {
           <SettingRow icon="⚠️" label="계정 탈퇴" danger onClick={()=>{}} />
         </div>
       </Card>
+
+      {/* 어르신 추가 모달 */}
+      {addOpen && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.65)", zIndex:300, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setAddOpen(false)}>
+          <div style={{ width:420, background:T.bg2, borderRadius:"20px 20px 0 0", border:`1px solid ${T.b2}`, padding:"22px 22px 40px", animation:"slideUp .3s ease both" }} onClick={e => e.stopPropagation()}>
+            <div style={{ width:36, height:4, background:T.b2, borderRadius:99, margin:"0 auto 20px" }} />
+            <div style={{ fontSize:16, fontWeight:700, color:T.t1, marginBottom:18 }}>어르신 추가</div>
+            {[
+              { label:"이름", placeholder:"예: 김순자", value:newName, onChange:setNewName },
+              { label:"나이", placeholder:"예: 78",    value:newAge,  onChange:setNewAge  },
+              { label:"주소", placeholder:"예: 서울 마포구", value:newAddr, onChange:setNewAddr },
+            ].map(f => (
+              <div key={f.label} style={{ marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:T.t3, marginBottom:6 }}>{f.label}</div>
+                <input value={f.value} onChange={e => f.onChange(e.target.value)} placeholder={f.placeholder}
+                  style={{ width:"100%", background:T.bg3, border:`1px solid ${T.b2}`, borderRadius:T.r.sm, padding:"12px 14px", fontSize:14, color:T.t1, outline:"none", boxSizing:"border-box" }} />
+              </div>
+            ))}
+            <Button onClick={handleAddElder} style={{ marginTop:8 }}>추가하기</Button>
+          </div>
+        </div>
+      )}
 
       {/* Edit modal */}
       {editOpen && (
