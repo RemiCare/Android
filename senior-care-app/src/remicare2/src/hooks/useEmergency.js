@@ -10,9 +10,9 @@ export const EMERGENCY_HISTORY = [
 ];
 
 export const SEV = {
-  high: { bg:"#270A0A", color:"#F87171", border:"rgba(248,113,113,0.25)", label:"고위험" },
-  mid:  { bg:"#271E00", color:"#FBBF24", border:"rgba(251,191,36,0.25)",  label:"주의" },
-  low:  { bg:"#0F2040", color:"#60A5FA", border:"rgba(96,165,250,0.25)",  label:"낮음" },
+  high: { bg:"#FDEEF0", color:"#E05555", border:"rgba(224,85,85,0.3)",   label:"고위험" },
+  mid:  { bg:"#FFF3F0", color:"#FF7A59", border:"rgba(255,122,89,0.3)",  label:"주의" },
+  low:  { bg:"#EEF2FF", color:"#5C7CFA", border:"rgba(92,124,250,0.3)",  label:"낮음" },
 };
 
 export function useEmergency() {

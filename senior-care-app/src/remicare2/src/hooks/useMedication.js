@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
+import { useApp } from "../context/AppContext";
 
-const INITIAL_MEDS = [
+const DEFAULT_MEDS = [
   { id: 1, name: "혈압약 (암로디핀 5mg)", times: ["09:00"],         taken: [true],         color: "#2DD4BF" },
   { id: 2, name: "혈당약 (메트포르민)",   times: ["08:00", "20:00"], taken: [true, false],  color: "#60A5FA" },
   { id: 3, name: "비타민D",              times: ["12:00"],          taken: [false],        color: "#FBBF24" },
@@ -8,21 +9,43 @@ const INITIAL_MEDS = [
 ];
 
 export function useMedication() {
-  const [meds, setMeds] = useState(INITIAL_MEDS);
+  const { state } = useApp();
+  const elderId = state.selectedElderId;
+
+  const [allMeds, setAllMeds] = useState(() => ({ [elderId]: DEFAULT_MEDS }));
+
+  const meds = allMeds[elderId] || [];
+
+  const addMed = useCallback((med) => {
+    setAllMeds(prev => ({
+      ...prev,
+      [elderId]: [...(prev[elderId] || []), med],
+    }));
+  }, [elderId]);
+
+  const removeMed = useCallback((id) => {
+    setAllMeds(prev => ({
+      ...prev,
+      [elderId]: (prev[elderId] || []).filter(m => m.id !== id),
+    }));
+  }, [elderId]);
 
   const toggleTaken = useCallback((medId, timeIndex) => {
-    setMeds(prev => prev.map(m =>
-      m.id === medId
-        ? { ...m, taken: m.taken.map((t, i) => i === timeIndex ? !t : t) }
-        : m
-    ));
-  }, []);
+    setAllMeds(prev => ({
+      ...prev,
+      [elderId]: (prev[elderId] || []).map(m =>
+        m.id === medId
+          ? { ...m, taken: m.taken.map((t, i) => i === timeIndex ? !t : t) }
+          : m
+      ),
+    }));
+  }, [elderId]);
 
   const stats = useMemo(() => {
     const total = meds.reduce((a, m) => a + m.times.length, 0);
     const taken = meds.reduce((a, m) => a + m.taken.filter(Boolean).length, 0);
-    const pct   = Math.round((taken / total) * 100);
-    const allDone = taken === total;
+    const pct   = Math.round(total > 0 ? (taken / total) * 100 : 0);
+    const allDone = total > 0 && taken === total;
     return { total, taken, pct, allDone };
   }, [meds]);
 
@@ -39,5 +62,5 @@ export function useMedication() {
     return null;
   }, [meds]);
 
-  return { meds, toggleTaken, stats, nextMed };
+  return { meds, addMed, removeMed, toggleTaken, stats, nextMed };
 }

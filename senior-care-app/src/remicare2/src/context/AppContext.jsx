@@ -2,30 +2,28 @@ import { createContext, useContext, useReducer, useCallback } from "react";
 
 const AppContext = createContext(null);
 
+const INITIAL_ELDERS = [
+  { id: 1, name: "김순자", age: 78, address: "서울 마포구", conditions: ["고혈압", "당뇨", "관절염"], photo: null },
+];
+
 const initialState = {
-  // Auth
   user: null,
   isLoggedIn: false,
 
-  // Elder
-  elder: {
-    name: "김순자",
-    age: 78,
-    address: "서울 마포구",
-    conditions: ["고혈압", "당뇨", "관절염"],
-    photo: null,
-  },
+  elders: INITIAL_ELDERS,
+  selectedElderId: 1,
+  elder: INITIAL_ELDERS[0],
 
-  // Vitals (real-time)
+  timelines: { 1: [] },
+
   vitals: {
     heartRate: 72,
     bloodPressure: "118/76",
     oxygen: 98.4,
     lastUpdated: new Date(),
-    status: "normal", // normal | warning | danger
+    status: "normal",
   },
 
-  // Device
   device: {
     wearableBattery: 82,
     camConnected: true,
@@ -33,11 +31,8 @@ const initialState = {
     accuracy: 96.2,
   },
 
-  // Notifications
   notifications: [],
   unreadCount: 2,
-
-  // Emergency
   emergencyActive: false,
 };
 
@@ -63,6 +58,30 @@ function reducer(state, action) {
       return { ...state, unreadCount: 0 };
     case "UPDATE_DEVICE":
       return { ...state, device: { ...state.device, ...action.payload } };
+    case "SET_TIMELINE": {
+      const elderId = action.elderId ?? state.selectedElderId;
+      return { ...state, timelines: { ...state.timelines, [elderId]: action.payload } };
+    }
+    case "ADD_ELDER": {
+      const newElder = action.payload;
+      return {
+        ...state,
+        elders: [...state.elders, newElder],
+        timelines: { ...state.timelines, [newElder.id]: [] },
+      };
+    }
+    case "SELECT_ELDER": {
+      const selected = state.elders.find(e => e.id === action.payload);
+      return { ...state, selectedElderId: action.payload, elder: selected || state.elder };
+    }
+    case "REMOVE_ELDER": {
+      const remaining = state.elders.filter(e => e.id !== action.payload);
+      const newSelectedId = state.selectedElderId === action.payload
+        ? (remaining[0]?.id ?? null)
+        : state.selectedElderId;
+      const newElder = remaining.find(e => e.id === newSelectedId) || remaining[0] || null;
+      return { ...state, elders: remaining, selectedElderId: newSelectedId, elder: newElder };
+    }
     default:
       return state;
   }
@@ -91,8 +110,35 @@ export function AppProvider({ children }) {
     dispatch({ type: "ADD_NOTIFICATION", payload: { ...notif, id: Date.now(), time: new Date() } });
   }, []);
 
+  const setTimeline = useCallback((newTimeline) => {
+    dispatch({ type: "SET_TIMELINE", elderId: state.selectedElderId, payload: newTimeline });
+  }, [state.selectedElderId]);
+
+  const addElder = useCallback((elderData) => {
+    const newElder = { id: Date.now(), ...elderData };
+    dispatch({ type: "ADD_ELDER", payload: newElder });
+    return newElder;
+  }, []);
+
+  const selectElder = useCallback((elderId) => {
+    dispatch({ type: "SELECT_ELDER", payload: elderId });
+  }, []);
+
+  const removeElder = useCallback((elderId) => {
+    dispatch({ type: "REMOVE_ELDER", payload: elderId });
+  }, []);
+
+  const stateWithTimeline = {
+    ...state,
+    timeline: state.timelines[state.selectedElderId] || [],
+  };
+
   return (
-    <AppContext.Provider value={{ state, login, logout, updateVitals, setEmergency, addNotification }}>
+    <AppContext.Provider value={{
+      state: stateWithTimeline,
+      login, logout, updateVitals, setEmergency, addNotification,
+      setTimeline, addElder, selectElder, removeElder,
+    }}>
       {children}
     </AppContext.Provider>
   );

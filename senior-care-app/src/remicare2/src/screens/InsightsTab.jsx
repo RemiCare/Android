@@ -57,15 +57,15 @@ function EmergencyBriefing() {
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                         <div style={{ width:7, height:7, borderRadius:"50%", background:s.color, boxShadow:`0 0 5px ${s.color}` }} />
-                        <span style={{ fontSize:13, fontWeight:700, color:s.color }}>{ev.type}</span>
-                        <span style={{ fontSize:10, background:"rgba(0,0,0,.12)", color:s.color, borderRadius:6, padding:"1px 7px" }}>{ev.source}</span>
+                        <span style={{ fontSize:13, fontWeight:700, color:T.t1 }}>{ev.type}</span>
+                        <span style={{ fontSize:10, background:"rgba(0,0,0,.12)", color:T.t2, borderRadius:6, padding:"1px 7px" }}>{ev.source}</span>
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <span style={{ fontSize:11, fontWeight:700, color:s.color }}>자세히 보기</span>
-                        <span style={{ fontSize:10, color:s.color }}>{isOpen?"▲":"▼"}</span>
+                        <span style={{ fontSize:11, fontWeight:700, color:T.t2 }}>자세히 보기</span>
+                        <span style={{ fontSize:10, color:T.t3 }}>{isOpen?"▲":"▼"}</span>
                       </div>
                     </div>
-                    <div style={{ fontSize:10, color:s.color, opacity:.7, marginTop:3, fontFamily:"'DM Mono',monospace" }}>{ev.date}</div>
+                    <div style={{ fontSize:10, color:T.t3, marginTop:3, fontFamily:"'DM Mono',monospace" }}>{ev.date}</div>
                   </div>
                   {isOpen && (
                     <div style={{ background:T.bg3, padding:"12px 14px", borderTop:`1px solid ${s.border}`, animation:"fadeUp .2s ease both" }}>
@@ -126,7 +126,7 @@ export default function InsightsTab() {
           <span>⚠</span>
           <span style={{ fontSize:11, fontWeight:700, color:T.amber, letterSpacing:.8, textTransform:"uppercase" }}>AI 건강 지침</span>
         </div>
-        <p style={{ fontSize:13, lineHeight:1.7, color:"#D97706" }}>
+        <p style={{ fontSize:13, lineHeight:1.7, color:T.t1 }}>
           최근 2주간 <strong>외출 빈도 80% 감소</strong>, 낮잠 시간 증가. 가벼운 우울감이나 관절 통증이 원인일 수 있습니다. 이번 주말 산책을 권해 보세요.
         </p>
       </div>
@@ -149,7 +149,7 @@ export default function InsightsTab() {
       <EmergencyBriefing />
       {/* SppbCard 삭제됨 */}
 
-      <Button onClick={() => setShowSheet(true)} style={{ background:`linear-gradient(135deg,#0F6E56,#1D9E75)`, boxShadow:"0 4px 20px rgba(29,158,117,.35)", color:"#fff" }}>
+      <Button onClick={() => setShowSheet(true)}>
         🏥 병원 진료용 PDF 리포트 발급
       </Button>
 

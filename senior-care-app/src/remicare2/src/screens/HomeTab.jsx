@@ -24,9 +24,8 @@ function VitalsCard() {
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
           {[
-            { val: vitals.heartRate, unit:"bpm",  label:"심박수",   color:T.green, icon:"♥" },
-            // 👇 혈압 대신 '걸음수'로 수정된 부분입니다!
-            { val: vitals.steps || "5,432", unit:"걸음", label:"걸음수", color:T.blue,  icon:"👣" },
+            { val: vitals.heartRate, unit:"bpm",  label:"심박수",   color:"#F06292", icon:"♥" },
+            { val: vitals.steps || "5,432", unit:"걸음", label:"걸음수", color:T.green,  icon:"◆" },
             { val: vitals.oxygen,    unit:"%",    label:"혈중산소", color:T.teal,  icon:"◎" },
           ].map(v => (
             <div key={v.label} style={{ background:T.bg3, borderRadius:T.r.md, padding:"11px 10px" }}>
@@ -154,7 +153,7 @@ function HomeCamCard() {
       const sc = scenes[cam]; const { width: w, height: h } = canvas;
       if (!sc) return; // 방어 코드
 
-      ctx.fillStyle = sc.bg; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "#E8E8E8"; ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = "rgba(255,255,255,0.03)"; ctx.fillRect(0, h * .6, w, h * .4);
       sc.dots.forEach(([x, y], i) => {
         const p = Math.sin(f * .025 + i) * 2;
@@ -237,7 +236,7 @@ function HomeCamCard() {
           </div>
           <div style={{ display: "flex", borderTop: `1px solid ${T.b1}`, paddingBottom: 24, overflowX: "auto" }}>
             {cameras.map(loc => (
-              <button key={loc} onClick={() => setCam(loc)} style={{ padding: "12px 16px", fontSize: 12, fontWeight: cam === loc ? 700 : 400, border: "none", background: "transparent", color: cam === loc ? T.teal : "rgba(255,255,255,.35)", borderTop: `2px solid ${cam === loc ? T.teal : "transparent"}`, cursor: "pointer", whiteSpace: "nowrap" }}>{loc}</button>
+              <button key={loc} onClick={() => setCam(loc)} style={{ padding: "12px 16px", fontSize: 12, fontWeight: cam === loc ? 700 : 400, border: "none", background: "transparent", color: cam === loc ? T.teal : "rgba(0,0,0,.4)", borderTop: `2px solid ${cam === loc ? T.teal : "transparent"}`, cursor: "pointer", whiteSpace: "nowrap" }}>{loc}</button>
             ))}
              {/* 전체화면 모드에서도 카메라 추가 버튼 지원 */}
              <button onClick={handleAddCamera} style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, border: "none", background: "transparent", color: T.blue, cursor: "pointer", whiteSpace: "nowrap" }}>
@@ -303,7 +302,7 @@ export default function HomeTab() {
 
       {/* AI Summary */}
       <div style={{
-        background:`linear-gradient(135deg,#0A2A24,#0D3328,#0A2218)`,
+        background:"#EEF2FF",
         borderRadius:T.r.xl, border:`1px solid ${T.teal}30`,
         padding:"18px 20px", marginBottom:12, position:"relative", overflow:"hidden",
       }}>
@@ -314,8 +313,8 @@ export default function HomeTab() {
           <span style={{ fontSize:11, fontWeight:700, color:T.teal, letterSpacing:1, textTransform:"uppercase" }}>AI 요약</span>
           <Pill color={T.teal} style={{ marginLeft:"auto", fontSize:10, animation:"pulse 2s infinite" }}>실시간</Pill>
         </div>
-        <p style={{ fontSize:14, lineHeight:1.7, color:T.tealText }}>
-          <strong style={{ color:T.teal }}>{state.elder.name}</strong> 님은 현재 평온한 상태이며,
+        <p style={{ fontSize:14, lineHeight:1.7, color:T.t1 }}>
+          <strong style={{ color:T.t1 }}>{state.elder.name}</strong> 님은 현재 평온한 상태이며,
           아침 약 복용을 완료하셨습니다. 오늘 활동량은 평균 수준입니다.
         </p>
       </div>

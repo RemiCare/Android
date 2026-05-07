@@ -9,7 +9,7 @@ const TABS = [
   { id:"home",    icon:"⌂",  label:"홈" },
   { id:"insight", icon:"↗",  label:"인사이트" },
   { id:"care",    icon:"★",  label:"돌봄 연계" },
-  { id:"profile", icon:"👤", label:"내 정보" },
+  { id:"profile", icon:"◉", label:"내 정보" },
 ];
 
 function EmergencyModal({ status, onClose }) {
@@ -50,7 +50,7 @@ export default function MainApp({ tab, setTab }) {
       {/* Header */}
       <div style={{ background:T.bg0, borderBottom:`1px solid ${T.b1}`, padding:"14px 18px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
         <div style={{ display:"flex", alignItems:"center", gap:11 }}>
-          <div style={{ width:34, height:34, borderRadius:10, background:T.tealDim, border:`1px solid ${T.teal}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17 }}>🌿</div>
+          <div style={{ width:34, height:34, borderRadius:10, background:T.tealDim, border:`1px solid ${T.teal}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:800, color:T.teal }}>R</div>
           <div>
             <div style={{ fontSize:16, fontWeight:700, color:T.t1, letterSpacing:-.5 }}>RemiCare</div>
             <div style={{ fontSize:11, color:T.t3 }}>

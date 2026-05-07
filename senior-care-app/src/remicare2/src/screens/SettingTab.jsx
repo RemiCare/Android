@@ -6,6 +6,88 @@ import { useMedication } from "../hooks/useMedication";
 import { useTimeline } from "../hooks/useTimeline";
 import { useApp } from "../context/AppContext";
 
+// ── 어르신 탭 ─────────────────────────────────────────────────────
+function ElderTabs() {
+  const { state, selectElder } = useApp();
+  const { elders, selectedElderId } = state;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+      <View style={{ flexDirection: "row", gap: 6 }}>
+        {elders.map(elder => {
+          const active = elder.id === selectedElderId;
+          return (
+            <TouchableOpacity
+              key={elder.id}
+              onPress={() => selectElder(elder.id)}
+              style={{
+                paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99,
+                backgroundColor: active ? T.teal : T.bg4,
+                borderColor: active ? T.teal : T.b2, borderWidth: 1,
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "600", color: active ? "#fff" : T.t3 }}>
+                {elder.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
+// ── 어르신 관리 ───────────────────────────────────────────────────
+function ElderManagement() {
+  const { state, addElder, removeElder } = useApp();
+  const { elders } = state;
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newAge, setNewAge] = useState("");
+  const [newAddr, setNewAddr] = useState("");
+
+  const handleAdd = () => {
+    if (!newName.trim()) { Alert.alert("알림", "어르신 이름을 입력해주세요."); return; }
+    addElder({ name: newName.trim(), age: parseInt(newAge) || 70, address: newAddr.trim() || "미입력", conditions: [], photo: null });
+    setNewName(""); setNewAge(""); setNewAddr(""); setIsAdding(false);
+  };
+
+  return (
+    <Card>
+      <SectionLabel action={isAdding ? "취소" : "어르신 추가"} onAction={() => setIsAdding(!isAdding)}>
+        어르신 관리
+      </SectionLabel>
+
+      {isAdding && (
+        <View style={{ backgroundColor: T.bg3, padding: 12, borderRadius: T.r.md, marginBottom: 12, borderColor: T.teal, borderWidth: 1 }}>
+          <TextInput placeholder="이름 (예: 김순자)" placeholderTextColor={T.t3} value={newName} onChangeText={setNewName}
+            style={{ backgroundColor: T.bg4, color: T.t1, padding: 10, borderRadius: T.r.sm, marginBottom: 8 }} />
+          <TextInput placeholder="나이 (예: 78)" placeholderTextColor={T.t3} value={newAge} onChangeText={setNewAge} keyboardType="numeric"
+            style={{ backgroundColor: T.bg4, color: T.t1, padding: 10, borderRadius: T.r.sm, marginBottom: 8 }} />
+          <TextInput placeholder="주소 (예: 서울 마포구)" placeholderTextColor={T.t3} value={newAddr} onChangeText={setNewAddr}
+            style={{ backgroundColor: T.bg4, color: T.t1, padding: 10, borderRadius: T.r.sm, marginBottom: 12 }} />
+          <Button onPress={handleAdd}>저장하기</Button>
+        </View>
+      )}
+
+      <View style={{ gap: 8 }}>
+        {elders.map(elder => (
+          <View key={elder.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: T.bg3, padding: 12, borderRadius: T.r.md }}>
+            <View>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: T.t1 }}>{elder.name}</Text>
+              <Text style={{ fontSize: 11, color: T.t3, marginTop: 2 }}>{elder.age}세 · {elder.address}</Text>
+            </View>
+            {elders.length > 1 && (
+              <TouchableOpacity onPress={() => removeElder(elder.id)} style={{ padding: 6 }}>
+                <Text style={{ color: T.red, fontWeight: "700" }}>삭제</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
 // 요일 상수
 const DAYS_OF_WEEK = ["월", "화", "수", "목", "금", "토", "일"];
 
@@ -135,6 +217,8 @@ function WearableSettings() {
 
 function MedicationSettings() {
   const { meds, addMed, removeMed } = useMedication();
+  const { state } = useApp();
+  const elderName = state.elder?.name || "";
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newTime, setNewTime] = useState("09:00");
@@ -174,8 +258,9 @@ function MedicationSettings() {
   return (
     <Card>
       <SectionLabel action={isAdding ? "취소" : "추가"} onAction={() => setIsAdding(!isAdding)}>
-        복약 설정
+        복약 설정 · {elderName}
       </SectionLabel>
+      <ElderTabs />
 
       {isAdding && (
         <View style={{ backgroundColor: T.bg3, padding: 12, borderRadius: T.r.md, marginBottom: 12, borderColor: T.teal, borderWidth: 1 }}>
@@ -247,6 +332,8 @@ function MedicationSettings() {
 
 function ScheduleSettings() {
   const { timeline, addTimelineItem, removeTimelineItem } = useTimeline();
+  const { state } = useApp();
+  const elderName = state.elder?.name || "";
   const [isAdding, setIsAdding] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newTime, setNewTime] = useState("10:00");
@@ -288,8 +375,9 @@ function ScheduleSettings() {
   return (
     <Card>
       <SectionLabel action={isAdding ? "취소" : "추가"} onAction={() => setIsAdding(!isAdding)}>
-        일정 설정
+        일정 설정 · {elderName}
       </SectionLabel>
+      <ElderTabs />
 
       {isAdding && (
         <View style={{ backgroundColor: T.bg3, padding: 12, borderRadius: T.r.md, marginBottom: 12, borderColor: T.teal, borderWidth: 1 }}>
@@ -366,6 +454,7 @@ export default function SettingsTab() {
         설정
       </Text>
 
+      <ElderManagement />
       <WearableSettings />
       <MedicationSettings />
       <ScheduleSettings />
