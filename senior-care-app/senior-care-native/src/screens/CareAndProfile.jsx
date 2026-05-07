@@ -32,11 +32,18 @@ export function ProfileTab() {
   const [newName, setNewName] = useState("");
   const [newAge, setNewAge] = useState("");
   const [newAddr, setNewAddr] = useState("");
+  const [newConditions, setNewConditions] = useState([]);
+
+  const CONDITION_OPTIONS = ["고혈압", "당뇨", "관절염", "치매", "심장질환", "뇌졸중", "골다공증", "만성폐질환"];
+
+  function toggleCondition(cond) {
+    setNewConditions(prev => prev.includes(cond) ? prev.filter(c => c !== cond) : [...prev, cond]);
+  }
 
   function handleAddElder() {
     if (!newName.trim()) return;
-    addElder({ name: newName.trim(), age: parseInt(newAge) || 0, address: newAddr.trim(), conditions: [], photo: null });
-    setNewName(""); setNewAge(""); setNewAddr("");
+    addElder({ name: newName.trim(), age: parseInt(newAge) || 0, address: newAddr.trim(), conditions: newConditions, photo: null });
+    setNewName(""); setNewAge(""); setNewAddr(""); setNewConditions([]);
     setAddOpen(false);
   }
 
@@ -149,6 +156,23 @@ export function ProfileTab() {
                 />
               </View>
             ))}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: T.t3, marginBottom: 8 }}>질환 선택 (복수 선택 가능)</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {CONDITION_OPTIONS.map(cond => {
+                  const active = newConditions.includes(cond);
+                  return (
+                    <TouchableOpacity
+                      key={cond}
+                      onPress={() => toggleCondition(cond)}
+                      style={{ paddingVertical: 6, paddingHorizontal: 12, borderRadius: 99, backgroundColor: active ? T.tealDim : T.bg3, borderColor: active ? T.teal : T.b2, borderWidth: 1 }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: active ? "700" : "400", color: active ? T.teal : T.t3 }}>{cond}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
             <Button onPress={handleAddElder} style={{ marginTop: 8 }}>추가하기</Button>
           </View>
         </View>
