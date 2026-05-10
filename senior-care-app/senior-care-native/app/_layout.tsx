@@ -4,12 +4,13 @@ import SplashScreen from "../src/screens/SplashScreen";
 import OnboardingScreen from "../src/screens/OnboardingScreen";
 import LoginScreen from "../src/screens/LoginScreen";
 import SignupScreen from "../src/screens/SignupScreen";
+import FindAccountScreen from "../src/screens/FindAccountScreen";
 import MainApp from "../src/screens/MainApp";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from "expo-status-bar";
 
 function RootNavigator() {
-  const { state } = useApp();
+  const { state } = useApp() as any;
   const [screen, setScreen] = useState("splash");
   const [tab, setTab] = useState("home");
 
@@ -30,7 +31,8 @@ function RootNavigator() {
   };
 
   // If context says logged in, go straight to main
-  if (state.isLoggedIn && screen !== "main") {
+  // "signup" 예외: signUp() 내부에서 login()이 호출되더라도 완료 화면을 먼저 보여줘야 함
+  if (state.isLoggedIn && screen !== "main" && screen !== "signup") {
     return <MainApp tab={tab} setTab={setTab} />;
   }
 
@@ -43,6 +45,7 @@ function RootNavigator() {
         <LoginScreen
           onLogin={() => setScreen("main")}
           onGoSignup={() => setScreen("signup")}
+          onGoFindAccount={() => setScreen("find-account")}
         />
       )}
       {screen === "signup" && (
@@ -50,6 +53,9 @@ function RootNavigator() {
           onDone={() => setScreen("main")}
           onBack={() => setScreen("login")}
         />
+      )}
+      {screen === "find-account" && (
+        <FindAccountScreen onBack={() => setScreen("login")} />
       )}
       {screen === "main" && <MainApp tab={tab} setTab={setTab} />}
     </>

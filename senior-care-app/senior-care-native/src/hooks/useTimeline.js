@@ -77,5 +77,21 @@ export function useTimeline() {
     setTimeline(timeline.map(item => item.id === id ? { ...item, ...updates } : item));
   }, [timeline, setTimeline]);
 
-  return { timeline, todayTimeline, addTimelineItem, removeTimelineItem, updateTimelineItem };
+  const toggleComplete = useCallback(async (id) => {
+    setTimeline(timeline.map(item =>
+      item.id === id
+        ? { ...item, status: item.status === "done" ? "wait" : "done", note: item.status === "done" ? "예정" : "완료" }
+        : item
+    ));
+    if (isLoggedIn && token) {
+      try {
+        await fetch(`${BASE_URL}/api/schedule/${id}/toggle`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {}
+    }
+  }, [isLoggedIn, token, timeline, setTimeline]);
+
+  return { timeline, todayTimeline, addTimelineItem, removeTimelineItem, updateTimelineItem, toggleComplete };
 }

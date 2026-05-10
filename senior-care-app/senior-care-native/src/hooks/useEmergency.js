@@ -45,7 +45,8 @@ export function useEmergency() {
         if (res.ok) {
           const data = await res.json();
           if ((data.fall_detected || data.bathroom_alert) && !callOpenRef.current) {
-            callOpenRef.current();
+            openCall();
+            fetch(`${state.aiServerUrl}/api/status/reset`, { method: "POST" }).catch(() => {});
           }
         }
       } catch {}

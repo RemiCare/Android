@@ -567,6 +567,22 @@ function ScheduleSettings() {
   );
 }
 
+function ZoneSettings() {
+  const handleSend = () => {
+    Alert.alert("이메일 발송", "이메일이 발송됐습니다.");
+  };
+
+  return (
+    <Card>
+      <SectionLabel>구간 설정</SectionLabel>
+      <Text style={{ fontSize: 12, color: T.t3, marginBottom: 12, lineHeight: 18 }}>
+        구간 설정 링크를 이메일로 전송합니다.
+      </Text>
+      <Button onPress={handleSend}>구간 설정하기</Button>
+    </Card>
+  );
+}
+
 export default function SettingsTab() {
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 14, paddingHorizontal: 14, paddingBottom: 90 }}>
@@ -577,6 +593,7 @@ export default function SettingsTab() {
       <WearableSettings />
       <MedicationSettings />
       <ScheduleSettings />
+      <ZoneSettings />
     </ScrollView>
   );
 }

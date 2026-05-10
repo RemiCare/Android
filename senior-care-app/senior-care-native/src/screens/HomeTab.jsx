@@ -45,6 +45,28 @@ function VitalsCard() {
   );
 }
 
+// ── Elder Tabs ────────────────────────────────────────────────────
+function ElderTabs() {
+  const { state, selectElder } = useApp();
+  const elders = state.elders || [];
+  if (elders.length <= 1) return null;
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+      {elders.map(e => {
+        const active = e.id === state.selectedElderId;
+        return (
+          <TouchableOpacity key={e.id} onPress={() => selectElder(e.id)}
+            style={{ paddingVertical: 5, paddingHorizontal: 14, borderRadius: 99,
+              backgroundColor: active ? T.tealDim : T.bg3,
+              borderColor: active ? T.teal : T.b2, borderWidth: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: active ? T.teal : T.t3 }}>{e.name}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 // ── Medication Card ───────────────────────────────────────────────
 function MedicationCard() {
   const { todayMeds, toggleTaken, stats, nextMed } = useMedication();
@@ -56,6 +78,7 @@ function MedicationCard() {
       <SectionLabel action={open ? "접기" : "상세보기"} onAction={() => setOpen(!open)}>
         복약 관리 ({dayStr}요일)
       </SectionLabel>
+      <ElderTabs />
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         <ProgressRing value={stats.taken} max={stats.total} size={56} stroke={5} color={stats.allDone ? T.green : T.teal} label={`/${stats.total}`} />
@@ -262,7 +285,7 @@ function HomeCamCard() {
 
 // ── Timeline ──────────────────────────────────────────────────────
 function TimelineCard() {
-  const { todayTimeline } = useTimeline();
+  const { todayTimeline, toggleComplete } = useTimeline();
   const dotColor = { done: T.green, warn: T.amber, wait: T.t3 };
   const dayStr = ["일", "월", "화", "수", "목", "금", "토"][new Date().getDay()];
 
@@ -273,6 +296,7 @@ function TimelineCard() {
       <SectionLabel>
         오늘의 일정 ({dayStr}요일)
       </SectionLabel>
+      <ElderTabs />
 
       <View style={{ marginTop: 10 }}>
         {sortedTimeline.length === 0 ? (
@@ -287,9 +311,23 @@ function TimelineCard() {
               <View style={{ marginTop: 3 }}>
                 <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: dotColor[item.status] || T.t3 }} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: "500", color: T.t1, lineHeight: 18 }}>{item.label}</Text>
-                <Text style={{ fontSize: 11, marginTop: 2, color: item.status === "done" ? T.green : T.t3 }}>{item.note}</Text>
+              <View style={{ flex: 1, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: "500", color: T.t1, lineHeight: 18 }}>{item.label}</Text>
+                  <Text style={{ fontSize: 11, marginTop: 2, color: item.status === "done" ? T.green : T.t3 }}>{item.note}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => toggleComplete(item.id)}
+                  style={{
+                    paddingVertical: 4, paddingHorizontal: 10, borderRadius: 99,
+                    backgroundColor: item.status === "done" ? `${T.green}22` : T.bg4,
+                    borderColor: item.status === "done" ? T.green : T.b2, borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: "600", color: item.status === "done" ? T.green : T.t3 }}>
+                    {item.status === "done" ? "✓ 완료" : "완료"}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           ))
@@ -320,14 +358,21 @@ export default function HomeTab() {
           <Text style={{ fontSize: 11, fontWeight: "700", color: T.teal, letterSpacing: 1, textTransform: "uppercase" }}>AI 요약</Text>
           <Pill color={T.teal} style={{ marginLeft: "auto", fontSize: 10 }}>실시간</Pill>
         </View>
-        <Text style={{ fontSize: 14, lineHeight: 24, color: T.t1 }}>
-          <Text style={{ color: T.t1, fontWeight: "bold" }}>{state.elder.name}</Text> 님은 현재 평온한 상태이며,
-          아침 약 복용을 완료하셨습니다. 오늘 활동량은 평균 수준입니다.
-        </Text>
+        {state.user?.role === "elder" ? (
+          <Text style={{ fontSize: 14, lineHeight: 24, color: T.t1 }}>
+            안녕하세요, <Text style={{ color: T.t1, fontWeight: "bold" }}>{state.user.name}</Text>님.
+            현재 평온한 상태이며, 아침 약 복용을 완료하셨습니다. 오늘 활동량은 평균 수준입니다.
+          </Text>
+        ) : (
+          <Text style={{ fontSize: 14, lineHeight: 24, color: T.t1 }}>
+            <Text style={{ color: T.t1, fontWeight: "bold" }}>{state.elder.name}</Text> 님은 현재 평온한 상태이며,
+            아침 약 복용을 완료하셨습니다. 오늘 활동량은 평균 수준입니다.
+          </Text>
+        )}
       </View>
 
       <VitalsCard />
-      <HomeCamCard />
+      {state.user?.role !== "elder" && <HomeCamCard />}
       <MedicationCard />
       <TimelineCard />
 

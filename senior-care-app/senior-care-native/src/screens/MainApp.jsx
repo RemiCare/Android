@@ -61,9 +61,15 @@ export default function MainApp({ tab, setTab }) {
           </View>
           <View>
             <Text style={styles.headerTitle}>RemiCare</Text>
-            <Text style={styles.headerSubtitle}>
-              {state.elder.name} · {state.elder.address} · <Text style={{ color: T.green }}>● 연결됨</Text>
-            </Text>
+            {state.user?.role === "elder" ? (
+              <Text style={styles.headerSubtitle}>
+                안녕하세요, {state.user.name}님 · <Text style={{ color: T.green }}>● 연결됨</Text>
+              </Text>
+            ) : (
+              <Text style={styles.headerSubtitle}>
+                {state.elder.name} · {state.elder.address} · <Text style={{ color: T.green }}>● 연결됨</Text>
+              </Text>
+            )}
           </View>
         </View>
         <TouchableOpacity onPress={openCall} style={styles.emergencyBtn}>

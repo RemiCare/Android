@@ -103,6 +103,27 @@ function reducer(state, action) {
       const newElder = remaining.find(e => e.id === newSelectedId) || remaining[0] || null;
       return { ...state, elders: remaining, selectedElderId: newSelectedId, elder: newElder };
     }
+    case "SET_ELDERS": {
+      const elders = action.payload;
+      if (!elders.length) return state;
+      const keepId = elders.find(e => e.id === state.selectedElderId)
+        ? state.selectedElderId
+        : elders[0].id;
+      const allMeds = {};
+      const timelines = {};
+      elders.forEach(e => {
+        allMeds[e.id]    = state.allMeds[e.id]    || [];
+        timelines[e.id]  = state.timelines[e.id]  || [];
+      });
+      return {
+        ...state,
+        elders,
+        selectedElderId: keepId,
+        elder: elders.find(e => e.id === keepId) || elders[0],
+        allMeds,
+        timelines,
+      };
+    }
     default:
       return state;
   }
@@ -156,6 +177,10 @@ export function AppProvider({ children }) {
     dispatch({ type: "REMOVE_ELDER", payload: elderId });
   }, []);
 
+  const setElders = useCallback((elders) => {
+    dispatch({ type: "SET_ELDERS", payload: elders });
+  }, []);
+
   const stateWithComputed = {
     ...state,
     meds: state.allMeds[state.selectedElderId] || [],
@@ -163,7 +188,7 @@ export function AppProvider({ children }) {
   };
 
   return (
-    <AppContext.Provider value={{ state: stateWithComputed, login, logout, updateVitals, setEmergency, addNotification, setMeds, setTimeline, setAiServerUrl, addElder, selectElder, removeElder }}>
+    <AppContext.Provider value={{ state: stateWithComputed, login, logout, updateVitals, setEmergency, addNotification, setMeds, setTimeline, setAiServerUrl, addElder, selectElder, removeElder, setElders }}>
       {children}
     </AppContext.Provider>
   );
