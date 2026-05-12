@@ -521,7 +521,7 @@ function ScheduleSettings() {
 
   const sortedTimeline = [...timeline].sort((a, b) => a.time.localeCompare(b.time));
 
-  const FormView = ({ onSave }) => (
+  const formJsx = (onSave) => (
     <View style={{ backgroundColor: T.bg3, padding: 14, borderRadius: T.r.md, marginBottom: 12, borderColor: `${T.teal}66`, borderWidth: 1, gap: 12 }}>
       <TextInput
         placeholder="일정 내용 (예: 병원 방문)"
@@ -552,7 +552,7 @@ function ScheduleSettings() {
       </SectionLabel>
       <ElderTabs />
 
-      {isAdding && <FormView onSave={handleAdd} />}
+      {isAdding && formJsx(handleAdd)}
 
       {sortedTimeline.length === 0 ? (
         <EmptyState icon="🗓" title="등록된 일정이 없습니다" desc="우측 상단의 추가를 눌러주세요." />
@@ -577,7 +577,7 @@ function ScheduleSettings() {
                     <Text style={{ color: T.red, fontWeight: "700" }}>삭제</Text>
                   </TouchableOpacity>
                 </View>
-                {isEditing && <FormView onSave={handleUpdate} />}
+                {isEditing && formJsx(handleUpdate)}
               </View>
             );
           })}
