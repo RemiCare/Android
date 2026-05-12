@@ -479,14 +479,16 @@ function MedicationSettings() {
 }
 
 function ScheduleSettings() {
-  const { timeline, addTimelineItem, removeTimelineItem } = useTimeline();
+  const { timeline, addTimelineItem, removeTimelineItem, updateTimelineItem } = useTimeline();
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [newLabel, setNewLabel] = useState("");
   const [newDays, setNewDays] = useState([...ALL_DAYS]);
   const [newTime, setNewTime] = useState("09:00");
 
   const reset = () => {
     setIsAdding(false);
+    setEditingId(null);
     setNewLabel("");
     setNewDays([...ALL_DAYS]);
     setNewTime("09:00");
@@ -498,46 +500,59 @@ function ScheduleSettings() {
   const handleAdd = () => {
     if (!newLabel.trim()) { Alert.alert("알림", "일정 내용을 입력해주세요."); return; }
     if (newDays.length === 0) { Alert.alert("알림", "요일을 선택해주세요."); return; }
-    addTimelineItem({
-      id: `t_${Date.now()}`,
-      time: newTime,
-      label: newLabel.trim(),
-      status: "wait",
-      note: "예정",
-      days: newDays,
-    });
+    addTimelineItem({ id: `t_${Date.now()}`, time: newTime, label: newLabel.trim(), status: "wait", note: "예정", days: newDays });
+    reset();
+  };
+
+  const handleEdit = (item) => {
+    setEditingId(item.id);
+    setNewLabel(item.label);
+    setNewDays(item.days || [...ALL_DAYS]);
+    setNewTime(item.time);
+    setIsAdding(false);
+  };
+
+  const handleUpdate = () => {
+    if (!newLabel.trim()) { Alert.alert("알림", "일정 내용을 입력해주세요."); return; }
+    if (newDays.length === 0) { Alert.alert("알림", "요일을 선택해주세요."); return; }
+    updateTimelineItem(editingId, { label: newLabel.trim(), time: newTime, days: newDays });
     reset();
   };
 
   const sortedTimeline = [...timeline].sort((a, b) => a.time.localeCompare(b.time));
 
+  const FormView = ({ onSave }) => (
+    <View style={{ backgroundColor: T.bg3, padding: 14, borderRadius: T.r.md, marginBottom: 12, borderColor: `${T.teal}66`, borderWidth: 1, gap: 12 }}>
+      <TextInput
+        placeholder="일정 내용 (예: 병원 방문)"
+        placeholderTextColor={T.t3}
+        value={newLabel}
+        onChangeText={setNewLabel}
+        style={{ backgroundColor: T.bg4, color: T.t1, padding: 10, borderRadius: T.r.sm }}
+      />
+      <View>
+        <Text style={{ fontSize: 12, color: T.t3, marginBottom: 8 }}>요일</Text>
+        <DaySelector selected={newDays} onToggle={toggleDay} />
+      </View>
+      <View>
+        <Text style={{ fontSize: 12, color: T.t3, marginBottom: 8 }}>시간</Text>
+        <TimePicker value={newTime} onChange={setNewTime} />
+      </View>
+      <Button onPress={onSave}>저장하기</Button>
+    </View>
+  );
+
   return (
     <Card>
-      <SectionLabel action={isAdding ? "취소" : "추가"} onAction={isAdding ? reset : () => setIsAdding(true)}>
+      <SectionLabel
+        action={isAdding || editingId ? "취소" : "추가"}
+        onAction={isAdding || editingId ? reset : () => setIsAdding(true)}
+      >
         일정 설정
       </SectionLabel>
       <ElderTabs />
 
-      {isAdding && (
-        <View style={{ backgroundColor: T.bg3, padding: 14, borderRadius: T.r.md, marginBottom: 12, borderColor: `${T.teal}66`, borderWidth: 1, gap: 12 }}>
-          <TextInput
-            placeholder="일정 내용 (예: 병원 방문)"
-            placeholderTextColor={T.t3}
-            value={newLabel}
-            onChangeText={setNewLabel}
-            style={{ backgroundColor: T.bg4, color: T.t1, padding: 10, borderRadius: T.r.sm }}
-          />
-          <View>
-            <Text style={{ fontSize: 12, color: T.t3, marginBottom: 8 }}>요일</Text>
-            <DaySelector selected={newDays} onToggle={toggleDay} />
-          </View>
-          <View>
-            <Text style={{ fontSize: 12, color: T.t3, marginBottom: 8 }}>시간</Text>
-            <TimePicker value={newTime} onChange={setNewTime} />
-          </View>
-          <Button onPress={handleAdd}>저장하기</Button>
-        </View>
-      )}
+      {isAdding && <FormView onSave={handleAdd} />}
 
       {sortedTimeline.length === 0 ? (
         <EmptyState icon="🗓" title="등록된 일정이 없습니다" desc="우측 상단의 추가를 눌러주세요." />
@@ -547,17 +562,22 @@ function ScheduleSettings() {
             const dayStr = DAY_ORDER
               .filter(d => (item.days || ALL_DAYS).includes(d))
               .map(d => DAY_LABEL[d]).join(" ");
+            const isEditing = editingId === item.id;
             return (
-              <View key={item.id} style={{ flexDirection: "row", alignItems: "center", backgroundColor: T.bg3, padding: 12, borderRadius: T.r.md }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: T.t1 }}>{item.label}</Text>
-                  <Text style={{ fontSize: 11, color: T.t3, marginTop: 3 }}>
-                    {item.time}  ·  {dayStr}
-                  </Text>
+              <View key={item.id}>
+                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: T.bg3, padding: 12, borderRadius: T.r.md }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: T.t1 }}>{item.label}</Text>
+                    <Text style={{ fontSize: 11, color: T.t3, marginTop: 3 }}>{item.time}  ·  {dayStr}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => isEditing ? reset() : handleEdit(item)} style={{ padding: 6, marginRight: 4 }}>
+                    <Text style={{ color: T.teal, fontWeight: "700" }}>{isEditing ? "취소" : "수정"}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => removeTimelineItem(item.id)} style={{ padding: 6 }}>
+                    <Text style={{ color: T.red, fontWeight: "700" }}>삭제</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => removeTimelineItem(item.id)} style={{ padding: 6 }}>
-                  <Text style={{ color: T.red, fontWeight: "700" }}>삭제</Text>
-                </TouchableOpacity>
+                {isEditing && <FormView onSave={handleUpdate} />}
               </View>
             );
           })}

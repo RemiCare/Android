@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from "react-native";
 import { T } from "../tokens";
 import { Card, SectionLabel, Toggle, Button } from "../components/UI";
 import { useApp } from "../context/AppContext";
 import { useAuth } from "../hooks/useAuth";
+import { BASE_URL } from "../constants";
 
 
 
@@ -26,8 +27,25 @@ function SettingRow({ icon, label, value, danger, onClick, right }) {
 export function ProfileTab() {
   const { state, addElder, selectElder, removeElder } = useApp();
   const { signOut } = useAuth();
+  const [profile, setProfile] = useState(null);
   const [notifs, setNotifs] = useState({ emergency: true, med: true, report: false });
   const [editOpen, setEdit] = useState(false);
+
+  useEffect(() => {
+    if (!state.user?.token) return;
+    fetch(`${BASE_URL}/api/user/me`, {
+      headers: { Authorization: `Bearer ${state.user.token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.results?.[0]) setProfile(data.results[0]); })
+      .catch(() => {});
+  }, [state.user?.token]);
+
+  const displayName    = profile?.name    || state.user?.name  || "홍길동";
+  const displayEmail   = profile?.email   || state.user?.email || "example@email.com";
+  const displayPhone   = profile?.phoneNumber || "-";
+  const displayAddress = profile?.address || "-";
+  const roleLabel = profile?.role === "ELDER" ? "어르신" : profile?.role === "PROTECTOR" ? "보호자" : state.user?.role === "elder" ? "어르신" : "보호자";
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newAge, setNewAge] = useState("");
@@ -56,11 +74,11 @@ export function ProfileTab() {
             <Text style={{ fontSize: 26 }}>👤</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 17, fontWeight: "700", color: T.t1 }}>{state.user?.name || "홍길동"}</Text>
-            <Text style={{ fontSize: 12, color: T.t3, marginTop: 2 }}>{state.user?.email || "example@email.com"}</Text>
+            <Text style={{ fontSize: 17, fontWeight: "700", color: T.t1 }}>{displayName}</Text>
+            <Text style={{ fontSize: 12, color: T.t3, marginTop: 2 }}>{displayEmail}</Text>
+            <Text style={{ fontSize: 12, color: T.t3, marginTop: 1 }}>{displayPhone}  ·  {displayAddress}</Text>
             <View style={{ flexDirection: "row", gap: 6, marginTop: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", backgroundColor: T.tealDim, color: T.teal, borderRadius: 99, paddingVertical: 2, paddingHorizontal: 10, overflow: "hidden" }}>보호자</Text>
-              <Text style={{ fontSize: 11, fontWeight: "600", backgroundColor: T.bg3, color: T.t3, borderRadius: 99, paddingVertical: 2, paddingHorizontal: 10, borderColor: T.b2, borderWidth: 1, overflow: "hidden" }}>프리미엄</Text>
+              <Text style={{ fontSize: 11, fontWeight: "600", backgroundColor: T.tealDim, color: T.teal, borderRadius: 99, paddingVertical: 2, paddingHorizontal: 10, overflow: "hidden" }}>{roleLabel}</Text>
             </View>
           </View>
           <TouchableOpacity onPress={() => setEdit(true)} style={{ backgroundColor: T.bg3, borderColor: T.b2, borderWidth: 1, borderRadius: T.r.sm, paddingVertical: 7, paddingHorizontal: 12 }}>

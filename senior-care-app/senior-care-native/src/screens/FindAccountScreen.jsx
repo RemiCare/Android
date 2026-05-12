@@ -86,7 +86,7 @@ export default function FindAccountScreen({ onBack }) {
       const res = await fetch(`${BASE_URL}/api/auth/reset-password`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ loginId, verificationCode: smsCode, newPassword }),
+        body: JSON.stringify({ loginId, phoneNumber: phone, verificationCode: smsCode, newPassword }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
