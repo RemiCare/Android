@@ -6,6 +6,18 @@ const INITIAL_ELDERS = [
   { id: 1, name: "김순자", age: 78, address: "서울 마포구", conditions: ["고혈압", "당뇨", "관절염"], photo: null },
 ];
 
+const DEFAULT_MEDS = [
+  { id: 1, name: "혈압약 (암로디핀 5mg)", times: ["09:00"],         taken: [true],         color: "#2DD4BF", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+  { id: 2, name: "혈당약 (메트포르민)",   times: ["08:00", "20:00"], taken: [true, false],  color: "#60A5FA", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+  { id: 3, name: "비타민D",              times: ["12:00"],          taken: [false],        color: "#FBBF24", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+  { id: 4, name: "오메가3",              times: ["21:00"],          taken: [false],        color: "#C084FC", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+];
+
+const DEFAULT_TIMELINE = [
+  { id: "t1", time: "08:00", label: "기상 및 아침 산책", status: "done", note: "완료", days: ["sun","mon","tue","wed","thu","fri","sat"] },
+  { id: "t2", time: "10:00", label: "복지관 문화교실",   status: "wait", note: "예정", days: ["mon","wed","fri"] },
+];
+
 const initialState = {
   user: null,
   isLoggedIn: false,
@@ -14,7 +26,8 @@ const initialState = {
   selectedElderId: 1,
   elder: INITIAL_ELDERS[0],
 
-  timelines: { 1: [] },
+  allMeds: { 1: DEFAULT_MEDS },
+  timelines: { 1: DEFAULT_TIMELINE },
 
   vitals: {
     heartRate: 72,
@@ -34,7 +47,7 @@ const initialState = {
   notifications: [],
   unreadCount: 2,
   emergencyActive: false,
-  aiServerUrl: "", // Added for camera integration
+  aiServerUrl: "",
 };
 
 function reducer(state, action) {
@@ -59,22 +72,22 @@ function reducer(state, action) {
       return { ...state, unreadCount: 0 };
     case "UPDATE_DEVICE":
       return { ...state, device: { ...state.device, ...action.payload } };
+    case "SET_MEDS": {
+      const eid = action.elderId ?? state.selectedElderId;
+      return { ...state, allMeds: { ...state.allMeds, [eid]: action.payload } };
+    }
     case "SET_TIMELINE": {
-      const elderId = action.elderId ?? state.selectedElderId;
-      return { ...state, timelines: { ...state.timelines, [elderId]: action.payload } };
+      const eid = action.elderId ?? state.selectedElderId;
+      return { ...state, timelines: { ...state.timelines, [eid]: action.payload } };
     }
-    case "SET_ELDERS": {
-      const elders = action.payload;
-      const selectedId = elders[0]?.id ?? null;
-      const timelines = { ...state.timelines };
-      elders.forEach(e => { if (!timelines[e.id]) timelines[e.id] = []; });
-      return { ...state, elders, selectedElderId: selectedId, elder: elders[0] || null, timelines };
-    }
+    case "SET_AI_SERVER_URL":
+      return { ...state, aiServerUrl: action.payload };
     case "ADD_ELDER": {
       const newElder = action.payload;
       return {
         ...state,
         elders: [...state.elders, newElder],
+        allMeds: { ...state.allMeds, [newElder.id]: [] },
         timelines: { ...state.timelines, [newElder.id]: [] },
       };
     }
@@ -90,8 +103,27 @@ function reducer(state, action) {
       const newElder = remaining.find(e => e.id === newSelectedId) || remaining[0] || null;
       return { ...state, elders: remaining, selectedElderId: newSelectedId, elder: newElder };
     }
-    case "SET_AI_SERVER_URL":
-      return { ...state, aiServerUrl: action.payload };
+    case "SET_ELDERS": {
+      const elders = action.payload;
+      if (!elders.length) return state;
+      const keepId = elders.find(e => e.id === state.selectedElderId)
+        ? state.selectedElderId
+        : elders[0].id;
+      const allMeds = {};
+      const timelines = {};
+      elders.forEach(e => {
+        allMeds[e.id]    = state.allMeds[e.id]    || [];
+        timelines[e.id]  = state.timelines[e.id]  || [];
+      });
+      return {
+        ...state,
+        elders,
+        selectedElderId: keepId,
+        elder: elders.find(e => e.id === keepId) || elders[0],
+        allMeds,
+        timelines,
+      };
+    }
     default:
       return state;
   }
@@ -120,14 +152,21 @@ export function AppProvider({ children }) {
     dispatch({ type: "ADD_NOTIFICATION", payload: { ...notif, id: Date.now(), time: new Date() } });
   }, []);
 
-  const setTimeline = useCallback((newTimeline) => {
-    dispatch({ type: "SET_TIMELINE", elderId: state.selectedElderId, payload: newTimeline });
+  const setMeds = useCallback((meds) => {
+    dispatch({ type: "SET_MEDS", elderId: state.selectedElderId, payload: meds });
   }, [state.selectedElderId]);
+
+  const setTimeline = useCallback((timeline) => {
+    dispatch({ type: "SET_TIMELINE", elderId: state.selectedElderId, payload: timeline });
+  }, [state.selectedElderId]);
+
+  const setAiServerUrl = useCallback((url) => {
+    dispatch({ type: "SET_AI_SERVER_URL", payload: url });
+  }, []);
 
   const addElder = useCallback((elderData) => {
     const newElder = { id: Date.now(), ...elderData };
     dispatch({ type: "ADD_ELDER", payload: newElder });
-    return newElder;
   }, []);
 
   const selectElder = useCallback((elderId) => {
@@ -142,21 +181,14 @@ export function AppProvider({ children }) {
     dispatch({ type: "SET_ELDERS", payload: elders });
   }, []);
 
-  const setAiServerUrl = useCallback((url) => {
-    dispatch({ type: "SET_AI_SERVER_URL", payload: url });
-  }, []);
-
-  const stateWithTimeline = {
+  const stateWithComputed = {
     ...state,
+    meds: state.allMeds[state.selectedElderId] || [],
     timeline: state.timelines[state.selectedElderId] || [],
   };
 
   return (
-    <AppContext.Provider value={{
-      state: stateWithTimeline,
-      login, logout, updateVitals, setEmergency, addNotification,
-      setTimeline, addElder, selectElder, removeElder, setElders, setAiServerUrl,
-    }}>
+    <AppContext.Provider value={{ state: stateWithComputed, login, logout, updateVitals, setEmergency, addNotification, setMeds, setTimeline, setAiServerUrl, addElder, selectElder, removeElder, setElders }}>
       {children}
     </AppContext.Provider>
   );

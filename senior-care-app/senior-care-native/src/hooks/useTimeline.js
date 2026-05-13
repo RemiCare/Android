@@ -121,6 +121,7 @@ export function useTimeline() {
     setTimeline(timeline.map(item => item.id === id ? { ...item, ...updates } : item));
   }, [isLoggedIn, token, elderlyId, timeline, setTimeline, fetchTimeline]);
 
+  // 백엔드에 toggle 엔드포인트 없음 — 로컬 상태만 변경
   const toggleComplete = useCallback((id) => {
     setTimeline(timeline.map(item =>
       item.id === id

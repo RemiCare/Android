@@ -21,13 +21,13 @@ export function useVitals() {
     }
 
     try {
+      /* 백엔드 엔드포인트 미구현으로 인해 잠시 주석 처리 (로그 클린업용)
       const response = await fetch(`${BASE_URL}/api/vital/latest`, {
         headers: {
           "Authorization": `Bearer ${state.user.token}`
         }
       });
       
-      // 401이나 403 에러가 나면 토큰 문제이므로 중단
       if (response.status === 401 || response.status === 403) return;
 
       const data = await response.json();
@@ -44,15 +44,16 @@ export function useVitals() {
         setAnimated(true);
         setTimeout(() => setAnimated(false), 400);
       }
+      */
     } catch (e) {
-      console.error("바이탈 조회 실패:", e);
+      // console.error("바이탈 조회 일시적 불가");
     }
   }, [state.isLoggedIn, state.user?.token]);
 
   useEffect(() => {
-    fetchLatestVitals();
-    // 10초마다 갱신
-    timerRef.current = setInterval(fetchLatestVitals, 10000);
+    // 백엔드 준비 전까지 바이탈 조회를 중단합니다.
+    // fetchLatestVitals();
+    // timerRef.current = setInterval(fetchLatestVitals, 10000);
     return () => clearInterval(timerRef.current);
   }, [fetchLatestVitals]);
 

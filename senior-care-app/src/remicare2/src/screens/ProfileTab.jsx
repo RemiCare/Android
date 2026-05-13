@@ -60,9 +60,28 @@ export default function ProfileTab({ onLogout }) {
   const [notifMed, setNotifMed] = useState(true);
   const [notifReport, setNotifReport] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [profile, setProfile] = useState(null);
 
   // --- 카메라 설정 관련 상태 ---
   const { state } = useApp();
+
+  // --- 프로필 정보 가져오기 ---
+  useEffect(() => {
+    if (!state.user?.token) return;
+    fetch(`${BASE_URL}/api/user/me`, {
+      headers: { Authorization: `Bearer ${state.user.token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.results?.[0]) setProfile(data.results[0]); })
+      .catch(() => {});
+  }, [state.user?.token]);
+
+  const displayName    = profile?.name    || state.user?.name  || "사용자";
+  const displayEmail   = profile?.email   || state.user?.email || "이메일 정보 없음";
+  const displayPhone   = profile?.phoneNumber || "-";
+  const displayAddress = profile?.address || "-";
+  const roleLabel = profile?.role === "ELDER" ? "어르신" : "보호자";
+
   const [camConfigOpen, setCamConfigOpen] = useState(false);
   const [configStep, setConfigStep] = useState(0); // 0: 거실, 1: 화장실
   const [tempZones, setTempZones] = useState({ b: null, c: null });
@@ -93,6 +112,31 @@ export default function ProfileTab({ onLogout }) {
     return () => cancelAnimationFrame(animRef.current);
   }, [camConfigOpen]);
 
+  // 바이탈과 무관하게 기존 카메라 구역 정보를 서버에서 가져옴
+  useEffect(() => {
+    const fetchZones = async () => {
+      if (!state.elder?.id) return;
+      try {
+        const response = await fetch(`${BASE_URL}/api/camera/zone/${state.elder.id}`, {
+          headers: { "Authorization": `Bearer ${state.user.token}` }
+        });
+        if (response.ok) {
+          const res = await response.json();
+          if (res.results) {
+            const data = res.results;
+            setTempZones({
+              b: { x: data.bX, y: data.bY, w: data.bW, h: data.bH },
+              c: { x: data.cX, y: data.cY, w: data.cW, h: data.cH }
+            });
+          }
+        }
+      } catch (e) {
+        console.log("Existing zones not found or fetch failed.");
+      }
+    };
+    if (camConfigOpen) fetchZones();
+  }, [camConfigOpen, state.elder?.id, state.user?.token]);
+
   const handleZoneComplete = (ratio) => {
     if (configStep === 0) {
       setTempZones(prev => ({ ...prev, b: ratio }));
@@ -107,7 +151,10 @@ export default function ProfileTab({ onLogout }) {
     try {
       const response = await fetch(`${BASE_URL}/api/camera/zone`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${state.user.token}`
+        },
         body: JSON.stringify({
           elderlyId: state.elder?.id || 1,
           bX: tempZones.b.x, bY: tempZones.b.y, bW: tempZones.b.w, bH: tempZones.b.h,
@@ -115,6 +162,15 @@ export default function ProfileTab({ onLogout }) {
         })
       });
       if (response.ok) {
+        // AI 서버(5000번 포트)에 즉시 갱신 신호 발송 (바이탈과 독립적)
+        try {
+          fetch(`http://192.168.1.102:5000/update_config`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ elderlyId: state.elder?.id || 1 })
+          }).catch(() => console.log("AI Server update signal failed - but DB saved."));
+        } catch (e) {}
+
         alert("카메라 감지 구역이 성공적으로 저장되었습니다.");
         setCamConfigOpen(false);
         setConfigStep(0);
@@ -138,10 +194,11 @@ export default function ProfileTab({ onLogout }) {
             fontSize: 28, flexShrink: 0,
           }}>👤</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: T.t1 }}>{state.user?.name || "사용자"}</div>
-            <div style={{ fontSize: 13, color: T.t3, marginTop: 2 }}>{state.user?.email || "이메일 정보 없음"}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: T.t1 }}>{displayName}</div>
+            <div style={{ fontSize: 13, color: T.t3, marginTop: 2 }}>{displayEmail}</div>
+            <div style={{ fontSize: 12, color: T.t3, marginTop: 1 }}>{displayPhone}  ·  {displayAddress}</div>
             <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, background: T.tealDim, color: T.teal, borderRadius: 99, padding: "2px 10px", border: `1px solid ${T.tealBorder}` }}>보호자</span>
+              <span style={{ fontSize: 11, fontWeight: 600, background: T.tealDim, color: T.teal, borderRadius: 99, padding: "2px 10px", border: `1px solid ${T.tealBorder}` }}>{roleLabel}</span>
               <span style={{ fontSize: 11, fontWeight: 600, background: T.bg3, color: T.t3, borderRadius: 99, padding: "2px 10px", border: `1px solid ${T.b2}` }}>프리미엄</span>
             </div>
           </div>
