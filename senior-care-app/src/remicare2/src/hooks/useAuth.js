@@ -10,6 +10,10 @@ export function useAuth() {
   const signIn = useCallback(async (email, password) => {
     if (!email || !password) { setError("이메일과 비밀번호를 입력하세요."); return false; }
     setError(""); setLoading(true);
+    
+    console.log("=== [DEBUG] 로그인 시도 시작 ===");
+    console.log("URL:", `${BASE_URL}/api/auth/login`);
+    
     try {
       const response = await fetch(`${BASE_URL}/api/auth/login`, {
         method: "POST",
@@ -17,14 +21,16 @@ export function useAuth() {
         body: JSON.stringify({ loginId: email, password: password })
       });
 
+      console.log("=== [DEBUG] 서버 응답 수신 ===");
+      console.log("Status:", response.status);
+
       const data = await response.json();
+      console.log("Response Data:", data);
 
       if (!response.ok) {
-        // 백엔드 에러 메시지는 data.status.message에 담겨 있음
         throw new Error(data.status?.message || "로그인에 실패했습니다.");
       }
 
-      // 백엔드 성공 응답은 data.results[0]에 담겨 있음
       const userResult = data.results && data.results[0];
       if (!userResult) {
         throw new Error("사용자 정보를 가져올 수 없습니다.");
@@ -38,6 +44,8 @@ export function useAuth() {
       });
       return true;
     } catch (e) {
+      console.error("=== [DEBUG] 통신 에러 발생 ===");
+      console.error(e);
       setError(e.message || "로그인에 실패했습니다. 다시 시도해주세요.");
       return false;
     } finally {
@@ -48,12 +56,11 @@ export function useAuth() {
   const signUp = useCallback(async (userData) => {
     setError(""); setLoading(true);
     try {
-      // 어르신 나이를 기반으로 생년월일 대략 계산
       const ageStr = userData.elderAge ? String(userData.elderAge).trim() : "";
-      const age = parseInt(ageStr) || 70; // 입력이 없으면 기본 70세
+      const age = parseInt(ageStr) || 70;
       const currentYear = new Date().getFullYear();
       const birthYear = currentYear - age;
-      const birthDate = `${birthYear}/01/01`; // 백엔드 형식: yyyy/MM/dd
+      const birthDate = `${birthYear}/01/01`;
 
       const requestData = {
         name: userData.elderName,           
@@ -64,11 +71,11 @@ export function useAuth() {
         address: userData.elderAddr,
         protectorName: userData.name,       
         protectorContact: userData.phone,   
-        rrn: "000101-4000000",              // 필수값 (규격 준수)
+        rrn: "000101-4000000",
         birthDate: birthDate,
-        gender: "남",                        // 백엔드: '남' 또는 '여'
-        fcmToken: "dummy_fcm_token_for_now", // 필수값
-        drn: "NONE",                        // DB의 NOT NULL 제약조건을 피하기 위한 임시 값
+        gender: "남",
+        fcmToken: "dummy_fcm_token_for_now",
+        drn: "NONE",
         role: "USER"
       };
 
@@ -79,10 +86,10 @@ export function useAuth() {
       });
 
       let data = {};
-      const text = await response.text(); // 먼저 텍스트로 읽음
+      const text = await response.text();
       if (text) {
         try {
-          data = JSON.parse(text); // 내용이 있으면 JSON으로 변환
+          data = JSON.parse(text);
         } catch (e) {
           console.error("JSON 파싱 에러:", e);
         }
@@ -92,7 +99,6 @@ export function useAuth() {
         throw new Error(data.status?.message || "회원가입에 실패했습니다.");
       }
 
-      // 회원가입 성공 후 바로 로그인 처리 (임시)
       login({ email: userData.email, name: userData.name, uid: "new-user" });
       return true;
     } catch (e) {

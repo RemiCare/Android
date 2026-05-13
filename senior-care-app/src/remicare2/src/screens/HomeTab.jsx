@@ -4,6 +4,7 @@ import { Card, SectionLabel, Pill, ProgressRing, Divider, EmptyState } from "../
 import { useVitals } from "../hooks/useVitals";
 import { useMedication } from "../hooks/useMedication";
 import { useApp } from "../context/AppContext";
+import { useSchedule } from "../hooks/useSchedule";
 
 // ── Vitals Card ───────────────────────────────────────────────────
 function VitalsCard() {
@@ -183,12 +184,33 @@ function HomeCamCard() {
     return () => cancelAnimationFrame(animRef.current);
   }, [cam, live, motion, scenes]);
 
+  // 실제 AI 엔진 스트리밍 주소 (노트북 IP 사용)
+  const STREAM_URL = "http://192.168.1.102:5000/video/feed";
+
   const CamView = ({ height = 220 }) => (
-    <div style={{ position: "relative", background: T.bg0 }}>
-      <canvas ref={canvasRef} width={392} height={height} style={{ width: "100%", display: "block" }} />
-      {!live && (
+    <div style={{ position: "relative", background: "#000", height, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {live ? (
+        <img 
+          src={STREAM_URL} 
+          alt="Live Stream"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={(e) => {
+            console.error("Stream connection failed");
+            setLive(false);
+          }}
+        />
+      ) : (
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <span style={{ color: T.t2, fontSize: 13 }}>연결 끊김</span>
+          <span style={{ color: "#fff", fontSize: 13 }}>연결 끊김</span>
+          <button onClick={() => setLive(true)} style={{ padding: "4px 10px", background: T.teal, color: "#fff", border: "none", borderRadius: 4, fontSize: 11 }}>재연결</button>
+        </div>
+      )}
+      
+      {/* REC 표시 오버레이 */}
+      {live && (
+        <div style={{ position: "absolute", top: 12, left: 12, display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff4d4f", animation: "pulse 1.5s infinite" }} />
+          <span style={{ color: "#fff", fontSize: 10, fontWeight: 700, textShadow: "0 0 4px rgba(0,0,0,0.5)" }}>REC</span>
         </div>
       )}
     </div>
@@ -250,7 +272,7 @@ function HomeCamCard() {
 }
 
 // ── Timeline ──────────────────────────────────────────────────────
-import { useSchedule } from "../hooks/useSchedule";
+
 
 function TimelineCard() {
   const { schedules, loading, removeSchedule, toggleSchedule } = useSchedule();

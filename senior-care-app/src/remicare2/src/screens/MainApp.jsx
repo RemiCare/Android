@@ -3,7 +3,8 @@ import { useEmergency } from "../hooks/useEmergency";
 import { useApp } from "../context/AppContext";
 import HomeTab      from "./HomeTab";
 import InsightsTab  from "./InsightsTab";
-import { CareTab, ProfileTab } from "./CareAndProfile";
+import { CareTab }  from "./CareAndProfile";
+import ProfileTab   from "./ProfileTab";
 
 const TABS = [
   { id:"home",    icon:"⌂",  label:"홈" },
