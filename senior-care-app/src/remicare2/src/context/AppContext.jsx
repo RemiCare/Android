@@ -34,6 +34,7 @@ const initialState = {
   notifications: [],
   unreadCount: 2,
   emergencyActive: false,
+  aiServerUrl: "", // Added for camera integration
 };
 
 function reducer(state, action) {
@@ -62,6 +63,13 @@ function reducer(state, action) {
       const elderId = action.elderId ?? state.selectedElderId;
       return { ...state, timelines: { ...state.timelines, [elderId]: action.payload } };
     }
+    case "SET_ELDERS": {
+      const elders = action.payload;
+      const selectedId = elders[0]?.id ?? null;
+      const timelines = { ...state.timelines };
+      elders.forEach(e => { if (!timelines[e.id]) timelines[e.id] = []; });
+      return { ...state, elders, selectedElderId: selectedId, elder: elders[0] || null, timelines };
+    }
     case "ADD_ELDER": {
       const newElder = action.payload;
       return {
@@ -82,6 +90,8 @@ function reducer(state, action) {
       const newElder = remaining.find(e => e.id === newSelectedId) || remaining[0] || null;
       return { ...state, elders: remaining, selectedElderId: newSelectedId, elder: newElder };
     }
+    case "SET_AI_SERVER_URL":
+      return { ...state, aiServerUrl: action.payload };
     default:
       return state;
   }
@@ -128,6 +138,14 @@ export function AppProvider({ children }) {
     dispatch({ type: "REMOVE_ELDER", payload: elderId });
   }, []);
 
+  const setElders = useCallback((elders) => {
+    dispatch({ type: "SET_ELDERS", payload: elders });
+  }, []);
+
+  const setAiServerUrl = useCallback((url) => {
+    dispatch({ type: "SET_AI_SERVER_URL", payload: url });
+  }, []);
+
   const stateWithTimeline = {
     ...state,
     timeline: state.timelines[state.selectedElderId] || [],
@@ -137,7 +155,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       state: stateWithTimeline,
       login, logout, updateVitals, setEmergency, addNotification,
-      setTimeline, addElder, selectElder, removeElder,
+      setTimeline, addElder, selectElder, removeElder, setElders, setAiServerUrl,
     }}>
       {children}
     </AppContext.Provider>

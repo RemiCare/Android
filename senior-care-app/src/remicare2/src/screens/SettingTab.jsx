@@ -180,6 +180,84 @@ function ScrollTimePicker({ value, onChange }) {
   );
 }
 
+function AiServerSettings() {
+  const { state, setAiServerUrl } = useApp();
+  const [url, setUrl] = useState(state.aiServerUrl || "");
+  const [status, setStatus] = useState(null); // null | "ok" | "fail" | "testing"
+
+  const testConnection = async () => {
+    if (!url.trim()) { Alert.alert("알림", "서버 주소를 입력해주세요."); return; }
+    setStatus("testing");
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`${url.trim()}/video/feed`, { method: "HEAD", signal: controller.signal });
+      clearTimeout(timer);
+      setStatus(res.ok ? "ok" : "fail");
+    } catch {
+      setStatus("fail");
+    }
+  };
+
+  const handleSave = () => {
+    setAiServerUrl(url.trim());
+    Alert.alert("저장 완료", "AI 서버 주소가 저장되었습니다.");
+  };
+
+  const statusInfo = {
+    ok:      { label: "연결 성공", color: T.green },
+    fail:    { label: "연결 실패 — IP 또는 포트를 확인하세요", color: T.red },
+    testing: { label: "연결 테스트 중...", color: T.amber },
+  };
+
+  return (
+    <Card>
+      <SectionLabel>AI 서버 연결</SectionLabel>
+      <Text style={{ fontSize: 12, color: T.t3, marginBottom: 10, lineHeight: 18 }}>
+        AI 서버가 실행 중인 PC의 IP 주소와 포트를 입력하세요.{"\n"}
+        <Text style={{ color: T.t2 }}>예: http://192.168.x.x:5000</Text>
+      </Text>
+
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+        <TextInput
+          placeholder="http://192.168.x.x:5000"
+          placeholderTextColor={T.t3}
+          value={url}
+          onChangeText={setUrl}
+          autoCapitalize="none"
+          keyboardType="url"
+          style={{ flex: 1, backgroundColor: T.bg3, color: T.t1, padding: 10, borderRadius: T.r.sm, fontSize: 13, borderColor: T.b2, borderWidth: 1 }}
+        />
+        <TouchableOpacity
+          onPress={testConnection}
+          style={{ paddingHorizontal: 14, borderRadius: T.r.sm, backgroundColor: T.bg3, borderColor: T.b2, borderWidth: 1, justifyContent: "center" }}
+        >
+          <Text style={{ fontSize: 12, color: T.t2 }}>테스트</Text>
+        </TouchableOpacity>
+      </View>
+
+      {status && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusInfo[status].color }} />
+          <Text style={{ fontSize: 12, color: statusInfo[status].color }}>{statusInfo[status].label}</Text>
+        </View>
+      )}
+
+      <Button onPress={handleSave}>주소 저장</Button>
+
+      {state.aiServerUrl ? (
+        <Text style={{ fontSize: 11, color: T.teal, marginTop: 8, textAlign: "center" }}>
+          ● 현재 저장된 주소: {state.aiServerUrl}
+        </Text>
+      ) : (
+        <Text style={{ fontSize: 11, color: T.t3, marginTop: 8, textAlign: "center" }}>
+          저장된 주소 없음 — 홈캠이 목업으로 표시됩니다.
+        </Text>
+      )}
+    </Card>
+  );
+}
+
 function WearableSettings() {
   const { state, dispatch } = useApp();
   const device = state.device;
@@ -331,10 +409,11 @@ function MedicationSettings() {
 }
 
 function ScheduleSettings() {
-  const { timeline, addTimelineItem, removeTimelineItem } = useTimeline();
+  const { timeline, addTimelineItem, removeTimelineItem, updateTimelineItem } = useTimeline();
   const { state } = useApp();
   const elderName = state.elder?.name || "";
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [newLabel, setNewLabel] = useState("");
   const [newTime, setNewTime] = useState("10:00");
   const [selectedDays, setSelectedDays] = useState([]);
@@ -343,6 +422,14 @@ function ScheduleSettings() {
     setSelectedDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
     );
+  };
+
+  const reset = () => {
+    setNewLabel("");
+    setNewTime("10:00");
+    setSelectedDays([]);
+    setIsAdding(false);
+    setEditingId(null);
   };
 
   const handleAdd = () => {
@@ -364,22 +451,46 @@ function ScheduleSettings() {
       note: "예정",
     });
 
-    setNewLabel("");
-    setNewTime("10:00");
-    setSelectedDays([]);
+    reset();
+  };
+
+  const handleEdit = (item) => {
+    setEditingId(item.id);
+    setNewLabel(item.label);
+    setNewTime(item.time);
+    setSelectedDays(item.days || []);
     setIsAdding(false);
+  };
+
+  const handleUpdate = () => {
+    if (!newLabel) {
+      Alert.alert("알림", "일정 내용을 입력해주세요.");
+      return;
+    }
+    if (selectedDays.length === 0) {
+      Alert.alert("알림", "일정을 등록할 요일을 하나 이상 선택해주세요.");
+      return;
+    }
+
+    updateTimelineItem(editingId, {
+      label: newLabel,
+      time: newTime,
+      days: selectedDays,
+    });
+
+    reset();
   };
 
   const sortedTimeline = [...timeline].sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <Card>
-      <SectionLabel action={isAdding ? "취소" : "추가"} onAction={() => setIsAdding(!isAdding)}>
+      <SectionLabel action={isAdding || editingId ? "취소" : "추가"} onAction={isAdding || editingId ? reset : () => setIsAdding(!isAdding)}>
         일정 설정 · {elderName}
       </SectionLabel>
       <ElderTabs />
 
-      {isAdding && (
+      {(isAdding || editingId) && (
         <View style={{ backgroundColor: T.bg3, padding: 12, borderRadius: T.r.md, marginBottom: 12, borderColor: T.teal, borderWidth: 1 }}>
           <TextInput
             placeholder="일정 내용 (예: 병원 방문)"
@@ -420,7 +531,7 @@ function ScheduleSettings() {
             })}
           </View>
 
-          <Button onPress={handleAdd}>저장하기</Button>
+          <Button onPress={editingId ? handleUpdate : handleAdd}>저장하기</Button>
         </View>
       )}
 
@@ -428,19 +539,27 @@ function ScheduleSettings() {
         <EmptyState icon="🗓" title="등록된 일정이 없습니다" desc="우측 상단의 추가를 눌러주세요." />
       ) : (
         <View style={{ gap: 8 }}>
-          {sortedTimeline.map(item => (
-            <View key={item.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: T.bg3, padding: 12, borderRadius: T.r.md }}>
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: "600", color: T.t1 }}>{item.label}</Text>
-                <Text style={{ fontSize: 11, color: T.t3, marginTop: 4 }}>
-                  요일: {item.days ? item.days.join(", ") : "매일"} | 시간: {item.time}
-                </Text>
+          {sortedTimeline.map(item => {
+            const isEditing = editingId === item.id;
+            return (
+              <View key={item.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: T.bg3, padding: 12, borderRadius: T.r.md }}>
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: T.t1 }}>{item.label}</Text>
+                  <Text style={{ fontSize: 11, color: T.t3, marginTop: 4 }}>
+                    요일: {item.days ? item.days.join(", ") : "매일"} | 시간: {item.time}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 4 }}>
+                  <TouchableOpacity onPress={() => handleEdit(item)} style={{ padding: 6 }}>
+                    <Text style={{ color: T.teal, fontWeight: "700" }}>수정</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => removeTimelineItem(item.id)} style={{ padding: 6 }}>
+                    <Text style={{ color: T.red, fontWeight: "700" }}>삭제</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <TouchableOpacity onPress={() => removeTimelineItem(item.id)} style={{ padding: 6 }}>
-                <Text style={{ color: T.red, fontWeight: "700" }}>삭제</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
     </Card>
@@ -454,6 +573,7 @@ export default function SettingsTab() {
         설정
       </Text>
 
+      <AiServerSettings />
       <WearableSettings />
       <MedicationSettings />
       <ScheduleSettings />
