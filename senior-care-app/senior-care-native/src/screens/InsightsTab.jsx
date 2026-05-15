@@ -1,25 +1,72 @@
-import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, SafeAreaView, Dimensions } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Modal, Dimensions } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import { T } from "../tokens";
 import { Card, SectionLabel, Pill, Button, EmptyState } from "../components/UI";
 import { useEmergency, SEV } from "../hooks/useEmergency";
+import { useApp } from "../context/AppContext";
+import { BASE_URL } from "../constants";
 
-const weeklyData = [
-  { label: "월", activity: 45, outing: 80, sleep: 70 },
-  { label: "화", activity: 60, outing: 60, sleep: 75 },
-  { label: "수", activity: 52, outing: 40, sleep: 65 },
-  { label: "목", activity: 70, outing: 55, sleep: 80 },
-  { label: "금", activity: 48, outing: 30, sleep: 60 },
-  { label: "토", activity: 65, outing: 20, sleep: 55 },
-  { label: "일", activity: 72, outing: 22, sleep: 71 },
+const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function useHealthHistory() {
+  const { state } = useApp();
+  const [history, setHistory] = useState([]);
+
+  const fetchHistory = useCallback(async () => {
+    const elderId = state.elder?.id;
+    if (!state.isLoggedIn || !state.user?.token || !elderId) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/health/${elderId}/history`, {
+        headers: { Authorization: `Bearer ${state.user.token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setHistory(data.results || []);
+    } catch {}
+  }, [state.isLoggedIn, state.user?.token, state.elder?.id]);
+
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
+
+  return history;
+}
+
+function buildChartData(history, days) {
+  const sorted = [...history]
+    .sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate))
+    .slice(-days);
+
+  if (sorted.length === 0) return null;
+
+  const maxSteps = Math.max(...sorted.map(d => d.stepsTotal || 0), 1);
+  const maxSleep = Math.max(...sorted.map(d => d.sleepHours || 0), 1);
+
+  return sorted.map(d => {
+    const date = new Date(d.recordDate);
+    const label = days <= 7 ? DAY_LABELS[date.getDay()] : `${date.getDate()}`;
+    return {
+      label,
+      activity: Math.round(((d.stepsTotal || 0) / maxSteps) * 100),
+      sleep:    Math.round(((d.sleepHours  || 0) / maxSleep) * 100),
+      heartRate: d.heartRateAvg || 0,
+    };
+  });
+}
+
+const FALLBACK_WEEKLY = [
+  { label: "월", activity: 45, sleep: 70, heartRate: 72 },
+  { label: "화", activity: 60, sleep: 75, heartRate: 75 },
+  { label: "수", activity: 52, sleep: 65, heartRate: 70 },
+  { label: "목", activity: 70, sleep: 80, heartRate: 78 },
+  { label: "금", activity: 48, sleep: 60, heartRate: 73 },
+  { label: "토", activity: 65, sleep: 55, heartRate: 69 },
+  { label: "일", activity: 72, sleep: 71, heartRate: 74 },
 ];
-
-const monthlyData = Array.from({ length: 30 }, (_, i) => ({
+const FALLBACK_MONTHLY = Array.from({ length: 30 }, (_, i) => ({
   label: `${i + 1}`,
   activity: 45 + Math.round(Math.sin(i * 0.4) * 15),
-  outing: Math.max(5, 80 - i * 2),
-  sleep: 65 + Math.round(Math.sin(i * 0.3) * 10)
+  sleep:    65 + Math.round(Math.sin(i * 0.3) * 10),
+  heartRate: 70 + Math.round(Math.sin(i * 0.2) * 8),
 }));
 
 function EmergencyBriefing() {
@@ -94,11 +141,15 @@ export default function InsightsTab() {
   const [period, setPeriod] = useState("week");
   const [showSheet, setShowSheet] = useState(false);
   const [selPeriod, setSelPeriod] = useState("최근 1주일");
-  const data = period === "week" ? weeklyData : monthlyData;
+  const history = useHealthHistory();
 
-  const lineData1 = data.map(d => ({ value: d.activity, label: d.label }));
-  const lineData2 = data.map(d => ({ value: d.outing, label: d.label }));
-  const lineData3 = data.map(d => ({ value: d.sleep, label: d.label }));
+  const days = period === "week" ? 7 : 30;
+  const realData = history.length > 0 ? buildChartData(history, days) : null;
+  const data = realData || (period === "week" ? FALLBACK_WEEKLY : FALLBACK_MONTHLY);
+
+  const lineData1 = data.map(d => ({ value: d.activity,  label: d.label }));
+  const lineData2 = data.map(d => ({ value: d.heartRate, label: d.label }));
+  const lineData3 = data.map(d => ({ value: d.sleep,     label: d.label }));
 
   const screenWidth = Dimensions.get("window").width;
 
@@ -145,7 +196,7 @@ export default function InsightsTab() {
           />
         </View>
         <View style={{ flexDirection: "row", gap: 14, marginTop: 16 }}>
-          {[[T.teal, "활동량"], [T.green, "외출 빈도"], [T.amber, "수면 규칙성"]].map(([c, n]) => (
+          {[[T.teal, "활동량(걸음)"], [T.green, "평균 심박수"], [T.amber, "수면"]].map(([c, n]) => (
             <View key={n} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <View style={{ width: 12, height: 2, backgroundColor: c, borderRadius: 1 }} />
               <Text style={{ fontSize: 10, color: T.t3 }}>{n}</Text>
