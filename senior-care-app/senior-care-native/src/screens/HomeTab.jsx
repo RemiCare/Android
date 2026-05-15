@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, SafeAreaView } from "react-native";
 import { WebView } from "react-native-webview";
 import { T } from "../tokens";
@@ -340,35 +340,64 @@ function TimelineCard() {
 // ── HomeTab ───────────────────────────────────────────────────────
 export default function HomeTab() {
   const { state } = useApp();
+  const { vitals } = useVitals();
+  const [aiResult, setAiResult] = useState(null);
+
+  const callAiPredict = useCallback(async () => {
+    if (!state.aiServerUrl || !state.elder?.id) return;
+    const predictBase = state.aiServerUrl.replace(/:\d+$/, "") + ":8000";
+    try {
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+      const res = await fetch(`${predictBase}/ai/predict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          elderlyId:           state.elder.id,
+          timestamp,
+          Heartrate:           vitals.heartRate || 72,
+          Breathrate:          16,
+          SPO2:                vitals.oxygen    || 98,
+          Walking_steps:       vitals.steps     || 0,
+          Caloricexpenditure:  Math.round((vitals.steps || 0) * 0.04),
+        }),
+      });
+      if (res.ok) setAiResult(await res.json());
+    } catch {}
+  }, [state.aiServerUrl, state.elder?.id, vitals.heartRate, vitals.oxygen, vitals.steps]);
+
+  useEffect(() => {
+    callAiPredict();
+    const id = setInterval(callAiPredict, 30000);
+    return () => clearInterval(id);
+  }, [callAiPredict]);
+
+  const isEmergency = aiResult?.predictionLabel?.includes("비정상");
+  const fallbackText = state.user?.role === "elder"
+    ? `안녕하세요, ${state.user.name}님. 현재 평온한 상태이며, 아침 약 복용을 완료하셨습니다. 오늘 활동량은 평균 수준입니다.`
+    : `${state.elder?.name} 님은 현재 평온한 상태이며, 아침 약 복용을 완료하셨습니다. 오늘 활동량은 평균 수준입니다.`;
+  const aiText = aiResult?.explanation || fallbackText;
+  const pillColor = isEmergency ? T.red : T.teal;
+  const pillLabel = isEmergency ? "⚠ 이상 감지" : "실시간";
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 14, paddingHorizontal: 14, paddingBottom: 90 }}>
       {/* AI Summary */}
       <View style={{
-        backgroundColor: '#EEF2FF',
-        borderRadius: T.r.xl, borderColor: `${T.teal}30`, borderWidth: 1,
+        backgroundColor: isEmergency ? "#FFF1F1" : "#EEF2FF",
+        borderRadius: T.r.xl, borderColor: isEmergency ? `${T.red}40` : `${T.teal}30`, borderWidth: 1,
         paddingVertical: 18, paddingHorizontal: 20, marginBottom: 12, overflow: "hidden",
       }}>
-        <View style={{ position: "absolute", top: -40, right: -40, width: 140, height: 140, borderRadius: 70, borderColor: `${T.teal}18`, borderWidth: 1 }} />
-        <View style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: 40, borderColor: `${T.teal}25`, borderWidth: 1 }} />
+        <View style={{ position: "absolute", top: -40, right: -40, width: 140, height: 140, borderRadius: 70, borderColor: `${pillColor}18`, borderWidth: 1 }} />
+        <View style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: 40, borderColor: `${pillColor}25`, borderWidth: 1 }} />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: T.tealDim, borderColor: `${T.teal}55`, borderWidth: 1, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ fontSize: 14 }}>🤖</Text>
           </View>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: T.teal, letterSpacing: 1, textTransform: "uppercase" }}>AI 요약</Text>
-          <Pill color={T.teal} style={{ marginLeft: "auto", fontSize: 10 }}>실시간</Pill>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: pillColor, letterSpacing: 1, textTransform: "uppercase" }}>AI 요약</Text>
+          <Pill color={pillColor} style={{ marginLeft: "auto", fontSize: 10 }}>{pillLabel}</Pill>
         </View>
-        {state.user?.role === "elder" ? (
-          <Text style={{ fontSize: 14, lineHeight: 24, color: T.t1 }}>
-            안녕하세요, <Text style={{ color: T.t1, fontWeight: "bold" }}>{state.user.name}</Text>님.
-            현재 평온한 상태이며, 아침 약 복용을 완료하셨습니다. 오늘 활동량은 평균 수준입니다.
-          </Text>
-        ) : (
-          <Text style={{ fontSize: 14, lineHeight: 24, color: T.t1 }}>
-            <Text style={{ color: T.t1, fontWeight: "bold" }}>{state.elder.name}</Text> 님은 현재 평온한 상태이며,
-            아침 약 복용을 완료하셨습니다. 오늘 활동량은 평균 수준입니다.
-          </Text>
-        )}
+        <Text style={{ fontSize: 14, lineHeight: 24, color: T.t1 }}>{aiText}</Text>
       </View>
 
       <VitalsCard />
