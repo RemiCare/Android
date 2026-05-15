@@ -80,30 +80,37 @@ export default function SignupScreen({ onDone, onBack }) {
   };
 
   const handleSendSms = async () => {
-    if (!form.phone) { Alert.alert("알림", "휴대폰 번호를 입력해주세요."); return; }
-    const ok = await sendSmsCode(form.phone);
-    if (ok) {
-      setSmsSent(true);
-      setTimer(300);
-      setTimerActive(true);
-      setSmsVerified(false);
-      setSmsCode("");
-    } else {
-      Alert.alert("오류", "인증번호 발송에 실패했습니다. 번호를 확인해주세요.");
-    }
-  };
+  if (!form.phone) {
+    Alert.alert("알림", "휴대폰 번호를 입력해주세요.");
+    return;
+  }
+
+  // 데모용: 실제 SMS 발송 없이 인증번호 입력칸만 열기
+  Alert.alert("데모 인증번호", "인증번호는 1234입니다.");
+
+  setSmsSent(true);
+  setTimer(300);
+  setTimerActive(true);
+  setSmsVerified(false);
+  setSmsCode("");
+};
 
   const handleVerifySms = async () => {
-    if (!smsCode) { Alert.alert("알림", "인증번호를 입력해주세요."); return; }
-    const ok = await verifySmsCode(form.phone, smsCode);
-    if (ok) {
-      setSmsVerified(true);
-      setTimerActive(false);
-      clearInterval(timerRef.current);
-    } else {
-      Alert.alert("오류", "인증번호가 올바르지 않습니다.");
-    }
-  };
+  if (!smsCode) {
+    Alert.alert("알림", "인증번호를 입력해주세요.");
+    return;
+  }
+
+  // 데모용: 1234만 통과
+  if (smsCode === "1234") {
+    setSmsVerified(true);
+    setTimerActive(false);
+    clearInterval(timerRef.current);
+    Alert.alert("인증 완료", "휴대폰 인증이 완료되었습니다.");
+  } else {
+    Alert.alert("오류", "인증번호가 올바르지 않습니다. 데모 인증번호는 1234입니다.");
+  }
+};
 
   const canNext = [
     form.loginId && form.name && form.password && form.password.length >= 8
