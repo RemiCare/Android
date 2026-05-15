@@ -131,7 +131,7 @@ export function useAuth() {
       const elderPhone = userData.elderPhone || `01099${Date.now().toString().slice(-6)}`;
 
       // 1. 보호자+어르신 통합 가입
-      const res = await fetch(`${BASE_URL}/api/auth/signup/combined`, {
+      const res = await fetch(`${BASE_URL}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
