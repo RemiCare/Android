@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, SafeAreaView } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, SafeAreaView, TextInput } from "react-native";
 import { WebView } from "react-native-webview";
 import { T } from "../tokens";
 import { Card, SectionLabel, Pill, ProgressRing, Divider, EmptyState } from "../components/UI";
@@ -152,6 +152,41 @@ function MedicationCard() {
 }
 
 // ── HomeCam Card ──────────────────────────────────────────────────
+function camViewJsx(live, feedUrl, height = 220) {
+  if (!live) {
+    return (
+      <View style={{ height, backgroundColor: "#111", alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: T.t3, fontSize: 13 }}>연결 끊김</Text>
+      </View>
+    );
+  }
+  if (!feedUrl) {
+    return (
+      <View style={{ height, backgroundColor: "#111", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <Text style={{ fontSize: 22 }}>📷</Text>
+        <Text style={{ color: T.t3, fontSize: 12 }}>AI 서버 주소 미설정</Text>
+        <Text style={{ color: T.t3, fontSize: 11 }}>설정 탭에서 주소를 입력해주세요.</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={{ height, backgroundColor: "#000" }}>
+      <WebView
+        source={{ uri: feedUrl }}
+        style={{ flex: 1, backgroundColor: "#000" }}
+        scrollEnabled={false}
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
+        onError={() => {}}
+      />
+      <View style={{ position: "absolute", top: 10, left: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#E24B4A" }} />
+        <Text style={{ color: "rgba(255,255,255,0.9)", fontWeight: "bold", fontSize: 10 }}>LIVE</Text>
+      </View>
+    </View>
+  );
+}
+
 function HomeCamCard() {
   const { state } = useApp();
   const [cameras, setCameras] = useState(["거실"]);
@@ -159,62 +194,19 @@ function HomeCamCard() {
   const [live, setLive] = useState(true);
   const [motion, setMotion] = useState(true);
   const [full, setFull] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newCamName, setNewCamName] = useState("");
 
   const feedUrl = state.aiServerUrl ? `${state.aiServerUrl}/video/feed` : null;
 
   const handleAddCamera = () => {
-    Alert.prompt(
-      "카메라 추가",
-      "추가할 홈캠의 위치를 입력하세요 (예: 안방, 마당):",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "추가",
-          onPress: (newName) => {
-            if (!newName || newName.trim() === "") return;
-            if (cameras.includes(newName)) {
-              Alert.alert("알림", "이미 추가된 위치입니다.");
-              return;
-            }
-            setCameras(prev => [...prev, newName]);
-            setCam(newName);
-          }
-        }
-      ]
-    );
-  };
-
-  const CamView = ({ height = 220 }) => {
-    if (!live) {
-      return (
-        <View style={{ height, backgroundColor: "#E8E8E8", alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: T.t2, fontSize: 13 }}>연결 끊김</Text>
-        </View>
-      );
-    }
-    if (!feedUrl) {
-      return (
-        <View style={{ height, backgroundColor: "#E8E8E8", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          <Text style={{ fontSize: 22 }}>📷</Text>
-          <Text style={{ color: T.t3, fontSize: 12 }}>AI 서버 주소 미설정</Text>
-          <Text style={{ color: T.t3, fontSize: 11 }}>설정 탭에서 주소를 입력해주세요.</Text>
-        </View>
-      );
-    }
-    return (
-      <View style={{ height, backgroundColor: "#E8E8E8" }}>
-        <WebView
-          source={{ uri: feedUrl }}
-          style={{ flex: 1, backgroundColor: "#E8E8E8" }}
-          scrollEnabled={false}
-          onError={() => {}}
-        />
-        <View style={{ position: "absolute", top: 10, left: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#E24B4A" }} />
-          <Text style={{ color: "rgba(255,255,255,0.9)", fontWeight: "bold", fontSize: 10 }}>LIVE</Text>
-        </View>
-      </View>
-    );
+    const name = newCamName.trim();
+    if (!name) return;
+    if (cameras.includes(name)) { Alert.alert("알림", "이미 추가된 위치입니다."); return; }
+    setCameras(prev => [...prev, name]);
+    setCam(name);
+    setNewCamName("");
+    setAddOpen(false);
   };
 
   return (
@@ -230,24 +222,25 @@ function HomeCamCard() {
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderTopColor: T.b1, borderTopWidth: 1, flexDirection: "row" }}>
-          {cameras.map(loc => (
-            <TouchableOpacity key={loc} onPress={() => setCam(loc)} style={{ paddingVertical: 9, paddingHorizontal: 12, borderBottomColor: cam === loc ? T.teal : "transparent", borderBottomWidth: 2 }}>
-              <Text style={{ fontSize: 12, fontWeight: cam === loc ? "700" : "400", color: cam === loc ? T.teal : T.t3 }}>{loc}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderTopColor: T.b1, borderTopWidth: 1 }}>
+          <View style={{ flexDirection: "row" }}>
+            {cameras.map(loc => (
+              <TouchableOpacity key={loc} onPress={() => setCam(loc)} style={{ paddingVertical: 9, paddingHorizontal: 12, borderBottomColor: cam === loc ? T.teal : "transparent", borderBottomWidth: 2 }}>
+                <Text style={{ fontSize: 12, fontWeight: cam === loc ? "700" : "400", color: cam === loc ? T.teal : T.t3 }}>{loc}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={() => setAddOpen(true)} style={{ paddingVertical: 9, paddingHorizontal: 12 }}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: T.blue }}>+ 추가</Text>
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity onPress={handleAddCamera} style={{ paddingVertical: 9, paddingHorizontal: 12 }}>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: T.blue }}>+ 추가</Text>
-          </TouchableOpacity>
+          </View>
         </ScrollView>
 
-        <CamView />
+        {camViewJsx(live, feedUrl, 220)}
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8, paddingVertical: 10, paddingHorizontal: 13 }}>
           {[
             { label: live ? "연결 중단" : "재연결", color: live ? T.red : T.green, dim: live ? T.redDim : T.greenDim, action: () => setLive(!live) },
             { label: `움직임 ${motion ? "ON" : "OFF"}`, color: motion ? T.amber : T.t3, dim: motion ? T.amberDim : T.bg4, action: () => setMotion(!motion) },
-            { label: "스냅샷", color: T.teal, dim: T.tealDim, action: () => {} },
           ].map(b => (
             <TouchableOpacity key={b.label} onPress={b.action} style={{ flex: 1, paddingVertical: 8, borderRadius: T.r.sm, backgroundColor: b.dim, borderColor: `${b.color}33`, borderWidth: 1, alignItems: "center" }}>
               <Text style={{ fontSize: 11, fontWeight: "600", color: b.color }}>{b.label}</Text>
@@ -256,28 +249,53 @@ function HomeCamCard() {
         </View>
       </Card>
 
+      {/* 전체화면 모달 */}
       <Modal visible={full} animationType="slide" onRequestClose={() => setFull(false)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg0 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16, paddingHorizontal: 20, borderBottomColor: T.b1, borderBottomWidth: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: T.t1 }}>RemiCare Cam — {cam}</Text>
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, paddingHorizontal: 20, borderBottomColor: T.b1, borderBottomWidth: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>RemiCare Cam — {cam}</Text>
             <TouchableOpacity onPress={() => setFull(false)} style={{ backgroundColor: T.bg4, borderColor: T.b2, borderWidth: 1, borderRadius: T.r.sm, paddingVertical: 6, paddingHorizontal: 14 }}>
               <Text style={{ color: T.t1, fontSize: 13 }}>닫기</Text>
             </TouchableOpacity>
           </View>
           <View style={{ flex: 1, justifyContent: "center" }}>
-            <CamView height={360} />
+            {camViewJsx(live, feedUrl, 360)}
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderTopColor: T.b1, borderTopWidth: 1, paddingBottom: 24, flexDirection: "row", maxHeight: 60 }}>
-            {cameras.map(loc => (
-              <TouchableOpacity key={loc} onPress={() => setCam(loc)} style={{ paddingVertical: 12, paddingHorizontal: 16, borderTopColor: cam === loc ? T.teal : "transparent", borderTopWidth: 2 }}>
-                <Text style={{ fontSize: 12, fontWeight: cam === loc ? "700" : "400", color: cam === loc ? T.teal : "rgba(0,0,0,.4)" }}>{loc}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity onPress={handleAddCamera} style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: T.blue }}>+ 추가</Text>
-            </TouchableOpacity>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderTopColor: T.b1, borderTopWidth: 1, maxHeight: 52, backgroundColor: "#000" }}>
+            <View style={{ flexDirection: "row" }}>
+              {cameras.map(loc => (
+                <TouchableOpacity key={loc} onPress={() => setCam(loc)} style={{ paddingVertical: 14, paddingHorizontal: 16, borderTopColor: cam === loc ? T.teal : "transparent", borderTopWidth: 2 }}>
+                  <Text style={{ fontSize: 12, fontWeight: cam === loc ? "700" : "400", color: cam === loc ? T.teal : "rgba(255,255,255,.5)" }}>{loc}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </ScrollView>
         </SafeAreaView>
+      </Modal>
+
+      {/* 카메라 추가 모달 (Alert.prompt 대체 — Android 호환) */}
+      <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,.6)", justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <View style={{ width: "100%", backgroundColor: T.bg2, borderRadius: T.r.lg, padding: 24, borderColor: T.b2, borderWidth: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: T.t1, marginBottom: 14 }}>카메라 위치 추가</Text>
+            <TextInput
+              style={{ backgroundColor: T.bg3, borderColor: T.b2, borderWidth: 1, borderRadius: T.r.sm, paddingVertical: 11, paddingHorizontal: 14, fontSize: 14, color: T.t1, marginBottom: 16 }}
+              placeholder="예) 안방, 마당"
+              placeholderTextColor={T.t3}
+              value={newCamName}
+              onChangeText={setNewCamName}
+              autoFocus
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity onPress={() => { setAddOpen(false); setNewCamName(""); }} style={{ flex: 1, paddingVertical: 11, borderRadius: T.r.sm, backgroundColor: T.bg3, borderColor: T.b2, borderWidth: 1, alignItems: "center" }}>
+                <Text style={{ color: T.t2, fontSize: 14, fontWeight: "600" }}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleAddCamera} style={{ flex: 1, paddingVertical: 11, borderRadius: T.r.sm, backgroundColor: T.teal, alignItems: "center" }}>
+                <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700" }}>추가</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </>
   );
