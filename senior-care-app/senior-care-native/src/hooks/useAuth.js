@@ -122,96 +122,127 @@ export function useAuth() {
     } catch { return false; }
   }, []);
 
-  // ── 통합 회원가입 (signup/combined 단일 요청) ───────────────────
   const signUp = useCallback(async (userData) => {
-    setError(""); setLoading(true);
+  setError("");
+  setLoading(true);
+
+  try {
+    // 백엔드 LegacySignUpRequest에 맞춘 flat JSON 구조
+    const payload = {
+      // 보호자 계정 정보
+      loginId: userData.loginId,
+      password: userData.password,
+
+      // 어르신 정보
+      name: userData.elderName,
+      phoneNumber: userData.elderPhone,
+      address: userData.elderAddr,
+      gender: userData.elderGender,
+
+      // 보호자 정보
+      protectorName: userData.name,
+      protectorContact: userData.phone,
+      protectorAddress: userData.address,
+      protectorGender: userData.gender,
+
+      // 선택값
+      rrn: null,
+      fcmToken: null,
+      drn: null,
+      role: null,
+    };
+
+    console.log("회원가입 요청 payload:", JSON.stringify(payload, null, 2));
+
+    // 1. 보호자+어르신 통합 가입
+    const res = await fetch(`${BASE_URL}/api/auth/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await res.text();
+    console.log("회원가입 응답 status:", res.status);
+    console.log("회원가입 응답 body:", responseText);
+
+    let data = {};
     try {
-      const elderLoginId = `elder${userData.elderName.replace(/\s/g, "")}${Date.now().toString().slice(-4)}`;
-      // 어르신 전화번호가 없으면 고유 플레이스홀더 생성 (중복 방지)
-      const elderPhone = userData.elderPhone || `01099${Date.now().toString().slice(-6)}`;
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      data = {};
+    }
 
-      // 1. 보호자+어르신 통합 가입
-      const res = await fetch(`${BASE_URL}/api/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          protector: {
-            name:        userData.name,
-            loginId:     userData.loginId,
-            email:       userData.email || `${userData.loginId}@remicare.app`,
-            password:    userData.password,
-            phoneNumber: userData.phone,
-            address:     userData.address,
-            rrn:         "000101-4000000",
-            birthDate:   "1980/01/01",
-            gender:      userData.gender || "남",
-            fcmToken:    "dummy_fcm_token",
-          },
-          elderly: {
-            name:             userData.elderName,
-            loginId:          elderLoginId,
-            email:            null,
-            password:         "Elder12345678",
-            phoneNumber:      elderPhone,
-            address:          userData.elderAddr,
-            rrn:              "000101-4000000",
-            drn:              null,
-            protectorName:    userData.name,
-            protectorContact: userData.phone,
-            protectorId:      null,
-            birthDate:        "1950/01/01",
-            gender:           userData.elderGender || "남",
-            fcmToken:         "dummy_fcm_token",
-          },
-        }),
+    if (!res.ok) {
+      throw new Error(data.status?.message || data.detail || "회원가입에 실패했습니다.");
+    }
+
+    const elderlyLoginCode = data.results?.[0]?.elderlyLoginCode || "";
+
+    // 2. 로그인 → 토큰 획득
+    const loginRes = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        loginId: userData.loginId,
+        password: userData.password,
+      }),
+    });
+
+    const loginText = await loginRes.text();
+    let loginData = {};
+
+    try {
+      loginData = loginText ? JSON.parse(loginText) : {};
+    } catch {
+      loginData = {};
+    }
+
+    if (!loginRes.ok) {
+      throw new Error(loginData.status?.message || "로그인에 실패했습니다.");
+    }
+
+    const protectorUser = loginData.results?.[0];
+    const token = protectorUser?.token;
+    const protectorId = String(protectorUser?.userId ?? "");
+
+    // 3. 앱 로그인 처리
+    login({
+      email: userData.loginId,
+      name: userData.name,
+      uid: protectorId,
+      token,
+    });
+
+    // 4. 담당 어르신 목록 조회
+    if (token) {
+      const assignedRes = await fetch(`${BASE_URL}/api/user/elderly`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.status?.message || "회원가입에 실패했습니다.");
 
-      const elderlyLoginCode = data.results?.[0]?.elderlyLoginCode || "";
+      if (assignedRes.ok) {
+        const assignedData = await assignedRes.json();
+        const list = assignedData.results ?? [];
 
-      // 2. 로그인 → 토큰 획득
-      const loginRes = await fetch(`${BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ loginId: userData.loginId, password: userData.password }),
-      });
-      if (!loginRes.ok) throw new Error("로그인에 실패했습니다.");
-      const loginData = await loginRes.json();
-      const protectorUser = loginData.results?.[0];
-      const token         = protectorUser?.token;
-      const protectorId   = String(protectorUser?.userId ?? "");
+        if (list.length > 0) {
+          const enriched = list.map((e, i) => ({
+            ...e,
+            loginCode: e.loginCode || (i === 0 ? elderlyLoginCode : ""),
+          }));
 
-      // 3. 앱 로그인 처리
-      login({ email: userData.loginId, name: userData.name, uid: protectorId, token });
-
-      // 4. 담당 어르신 목록 조회
-      if (token) {
-        const assignedRes = await fetch(`${BASE_URL}/api/user/elderly`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (assignedRes.ok) {
-          const assignedData = await assignedRes.json();
-          const list = assignedData.results ?? [];
-          if (list.length > 0) {
-            // 회원가입 응답의 elderlyLoginCode로 첫 번째 어르신 loginCode 보완
-            const enriched = list.map((e, i) => ({
-              ...e,
-              loginCode: e.loginCode || (i === 0 ? elderlyLoginCode : ""),
-            }));
-            setElders(enriched.map(serverElderToLocal));
-          }
+          setElders(enriched.map(serverElderToLocal));
         }
       }
-
-      return { ok: true, elderlyLoginCode };
-    } catch (e) {
-      setError(e.message || "회원가입에 실패했습니다.");
-      return { ok: false };
-    } finally {
-      setLoading(false);
     }
-  }, [login, setElders]);
+
+    return { ok: true, elderlyLoginCode };
+  } catch (e) {
+    console.log("회원가입 요청 실패:", e);
+    setError(e.message || "회원가입에 실패했습니다.");
+    return { ok: false };
+  } finally {
+    setLoading(false);
+  }
+}, [login, setElders]);
 
   // ── 아이디 중복 확인 ─────────────────────────────────────────────
   const checkLoginId = useCallback(async (loginId) => {
