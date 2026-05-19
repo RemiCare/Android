@@ -109,105 +109,63 @@ function MedicationCard() {
 
 // ── HomeCam Card ──────────────────────────────────────────────────
 function HomeCamCard() {
-  // 기본 카메라 1개로 초기 상태 설정
+  const { state } = useApp();
   const [cameras, setCameras] = useState(["거실"]);
-  const [scenes, setScenes] = useState({
-    거실: { bg: "#060D1A", dots: [[55, 85], [185, 58], [285, 92], [95, 118]] }
-  });
-  
   const [cam, setCam] = useState("거실");
   const [live, setLive] = useState(true);
   const [motion, setMotion] = useState(true);
   const [full, setFull] = useState(false);
-  const canvasRef = useRef(null);
-  const animRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
 
-  // 카메라 추가 함수
+  // 설정 탭에서 저장한 서버 주소를 사용
+  const streamUrl = state.aiServerUrl ? `${state.aiServerUrl}/video/feed` : null;
+
+  // 서버 주소가 바뀌면 스트림 재시작
+  useEffect(() => {
+    setLive(true);
+  }, [streamUrl]);
+
+  // 끊기면 5초 후 자동 재연결
+  useEffect(() => {
+    if (!live && streamUrl) {
+      reconnectTimerRef.current = setTimeout(() => setLive(true), 5000);
+    }
+    return () => clearTimeout(reconnectTimerRef.current);
+  }, [live, streamUrl]);
+
   const handleAddCamera = () => {
     const newName = window.prompt("추가할 홈캠의 위치를 입력하세요 (예: 안방, 마당):");
-    
-    // 입력이 취소되었거나 빈 칸인 경우 무시
     if (!newName || newName.trim() === "") return;
-    
-    // 중복 이름 방지
     if (cameras.includes(newName)) {
       alert("이미 추가된 위치입니다.");
       return;
     }
-
-    // 새 카메라를 위한 무작위 캔버스 효과(배경색, 움직임 좌표) 생성
-    const randomBg = `#0${Math.floor(Math.random() * 9)}1${Math.floor(Math.random() * 9)}1${Math.floor(Math.random() * 9)}`;
-    const randomDots = Array.from({ length: 3 }, () => [
-      Math.floor(Math.random() * 250) + 50, 
-      Math.floor(Math.random() * 100) + 50
-    ]);
-
-    setScenes(prev => ({ ...prev, [newName]: { bg: randomBg, dots: randomDots } }));
     setCameras(prev => [...prev, newName]);
-    setCam(newName); // 추가 후 바로 새 카메라 화면으로 이동
+    setCam(newName);
   };
-
-  useEffect(() => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d"); let f = 0;
-    const draw = () => {
-      const sc = scenes[cam]; const { width: w, height: h } = canvas;
-      if (!sc) return; // 방어 코드
-
-      ctx.fillStyle = "#E8E8E8"; ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = "rgba(255,255,255,0.03)"; ctx.fillRect(0, h * .6, w, h * .4);
-      sc.dots.forEach(([x, y], i) => {
-        const p = Math.sin(f * .025 + i) * 2;
-        ctx.fillStyle = "rgba(255,255,255,0.055)"; ctx.beginPath();
-        ctx.ellipse(x, y + p, 28 + i * 4, 10, 0, 0, Math.PI * 2); ctx.fill();
-      });
-      if (motion) {
-        const px = 160 + Math.sin(f * .012) * 12;
-        ctx.fillStyle = "rgba(45,212,191,0.22)"; ctx.beginPath();
-        ctx.ellipse(px, 72, 9, 13, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillRect(px - 7, 84, 14, 22);
-        ctx.strokeStyle = "rgba(45,212,191,0.15)"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.ellipse(px, 80, 18, 24, 0, 0, Math.PI * 2); ctx.stroke();
-      }
-      const sy = (f * 1.2) % h; ctx.fillStyle = "rgba(45,212,191,0.025)"; ctx.fillRect(0, sy, w, 1);
-      const now = new Date();
-      const ts = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
-      ctx.font = "bold 10px monospace"; ctx.fillStyle = "rgba(45,212,191,0.7)";
-      ctx.fillText(ts, 10, h - 10); ctx.fillText(`● ${cam.toUpperCase()}`, w - 64, h - 10);
-      if (live && f % 50 < 35) {
-        ctx.fillStyle = "#E24B4A"; ctx.beginPath(); ctx.arc(10, 12, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.font = "bold 10px monospace"; ctx.fillText("REC", 20, 16);
-      }
-      f++; animRef.current = requestAnimationFrame(draw);
-    };
-    animRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(animRef.current);
-  }, [cam, live, motion, scenes]);
-
-  // 실제 AI 엔진 스트리밍 주소 (노트북 IP 사용)
-  const STREAM_URL = "http://192.168.1.102:5000/video/feed";
 
   const CamView = ({ height = 220 }) => (
     <div style={{ position: "relative", background: "#000", height, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      {live ? (
-        <img 
-          src={STREAM_URL} 
+      {!streamUrl ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "#888", fontSize: 13 }}>서버 주소 미설정</span>
+          <span style={{ color: "#666", fontSize: 11 }}>설정 탭에서 AI 서버 주소를 입력하세요</span>
+        </div>
+      ) : live ? (
+        <img
+          src={streamUrl}
           alt="Live Stream"
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          onError={(e) => {
-            console.error("Stream connection failed");
-            setLive(false);
-          }}
+          onError={() => setLive(false)}
         />
       ) : (
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <span style={{ color: "#fff", fontSize: 13 }}>연결 끊김</span>
-          <button onClick={() => setLive(true)} style={{ padding: "4px 10px", background: T.teal, color: "#fff", border: "none", borderRadius: 4, fontSize: 11 }}>재연결</button>
+          <span style={{ color: "#fff", fontSize: 13 }}>연결 끊김 — 5초 후 자동 재연결</span>
+          <button onClick={() => { clearTimeout(reconnectTimerRef.current); setLive(true); }} style={{ padding: "4px 10px", background: T.teal, color: "#fff", border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer" }}>즉시 재연결</button>
         </div>
       )}
-      
-      {/* REC 표시 오버레이 */}
-      {live && (
+
+      {streamUrl && live && (
         <div style={{ position: "absolute", top: 12, left: 12, display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff4d4f", animation: "pulse 1.5s infinite" }} />
           <span style={{ color: "#fff", fontSize: 10, fontWeight: 700, textShadow: "0 0 4px rgba(0,0,0,0.5)" }}>REC</span>
@@ -230,7 +188,6 @@ function HomeCamCard() {
           {cameras.map(loc => (
             <button key={loc} onClick={() => setCam(loc)} style={{ padding: "9px 12px", fontSize: 12, fontWeight: cam === loc ? 700 : 400, border: "none", background: "transparent", color: cam === loc ? T.teal : T.t3, borderBottom: `2px solid ${cam === loc ? T.teal : "transparent"}`, cursor: "pointer", transition: "color .15s,border-color .15s", whiteSpace: "nowrap" }}>{loc}</button>
           ))}
-          {/* 카메라 추가 버튼 */}
           <button onClick={handleAddCamera} style={{ padding: "9px 12px", fontSize: 12, fontWeight: 600, border: "none", background: "transparent", color: T.blue, cursor: "pointer", whiteSpace: "nowrap" }}>
             + 추가
           </button>
@@ -253,15 +210,14 @@ function HomeCamCard() {
             <span style={{ fontSize: 15, fontWeight: 700, color: T.t1 }}>RemiCare Cam — {cam}</span>
             <button onClick={() => setFull(false)} style={{ background: T.bg4, border: `1px solid ${T.b2}`, borderRadius: T.r.sm, padding: "6px 14px", color: T.t1, fontSize: 13, cursor: "pointer" }}>닫기</button>
           </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
-            <canvas ref={canvasRef} width={392} height={360} style={{ width: "100%" }} />
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <CamView height="100%" />
           </div>
           <div style={{ display: "flex", borderTop: `1px solid ${T.b1}`, paddingBottom: 24, overflowX: "auto" }}>
             {cameras.map(loc => (
               <button key={loc} onClick={() => setCam(loc)} style={{ padding: "12px 16px", fontSize: 12, fontWeight: cam === loc ? 700 : 400, border: "none", background: "transparent", color: cam === loc ? T.teal : "rgba(0,0,0,.4)", borderTop: `2px solid ${cam === loc ? T.teal : "transparent"}`, cursor: "pointer", whiteSpace: "nowrap" }}>{loc}</button>
             ))}
-             {/* 전체화면 모드에서도 카메라 추가 버튼 지원 */}
-             <button onClick={handleAddCamera} style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, border: "none", background: "transparent", color: T.blue, cursor: "pointer", whiteSpace: "nowrap" }}>
+            <button onClick={handleAddCamera} style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, border: "none", background: "transparent", color: T.blue, cursor: "pointer", whiteSpace: "nowrap" }}>
               + 추가
             </button>
           </div>

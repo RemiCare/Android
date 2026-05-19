@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal, SafeAreaView, Image, PanResponder } from "react-native";
 import { T } from "../tokens";
 import { Card, SectionLabel, Button, EmptyState } from "../components/UI";
 import { useMedication } from "../hooks/useMedication";
@@ -588,18 +588,229 @@ function ScheduleSettings() {
 }
 
 function ZoneSettings() {
-  const handleSend = () => {
-    Alert.alert("이메일 발송", "이메일이 발송됐습니다.");
+  const { state } = useApp();
+  const [visible, setVisible]       = useState(false);
+  const [snapshotUrl, setSnapshotUrl] = useState(null);
+  const [step, setStep]             = useState("b"); // "b" | "c" | "done"
+  const [bZone, setBZone]           = useState(null);
+  const [cZone, setCZone]           = useState(null);
+  const [dragRect, setDragRect]     = useState(null);
+  const [saving, setSaving]         = useState(false);
+
+  const stepRef      = useRef("b");
+  const imgLayoutRef = useRef({ width: 320, height: 240 });
+
+  useEffect(() => { stepRef.current = step; }, [step]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => stepRef.current !== "done",
+      onPanResponderGrant: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        setDragRect({ x1: locationX, y1: locationY, x2: locationX, y2: locationY });
+      },
+      onPanResponderMove: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        setDragRect(prev => prev ? { ...prev, x2: locationX, y2: locationY } : null);
+      },
+      onPanResponderRelease: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        setDragRect(prev => {
+          if (!prev) return null;
+          const { width: iw, height: ih } = imgLayoutRef.current;
+          const zone = {
+            x: Math.min(prev.x1, locationX) / iw,
+            y: Math.min(prev.y1, locationY) / ih,
+            w: Math.abs(locationX - prev.x1) / iw,
+            h: Math.abs(locationY - prev.y1) / ih,
+          };
+          if (stepRef.current === "b") {
+            setBZone(zone);
+            setStep("c");
+            stepRef.current = "c";
+          } else if (stepRef.current === "c") {
+            setCZone(zone);
+            setStep("done");
+            stepRef.current = "done";
+          }
+          return null;
+        });
+      },
+    })
+  ).current;
+
+  const openSetup = () => {
+    if (!state.aiServerUrl) {
+      Alert.alert("알림", "AI 서버 주소를 먼저 설정하세요.");
+      return;
+    }
+    setSnapshotUrl(`${state.aiServerUrl}/snapshot?t=${Date.now()}`);
+    setStep("b"); stepRef.current = "b";
+    setBZone(null); setCZone(null); setDragRect(null);
+    setVisible(true);
   };
 
+  const resetZones = () => {
+    setStep("b"); stepRef.current = "b";
+    setBZone(null); setCZone(null); setDragRect(null);
+  };
+
+  const saveZones = async () => {
+    if (!bZone || !cZone) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${state.aiServerUrl}/update_config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          elderlyId: state.elder?.id || 1,
+          bX: bZone.x, bY: bZone.y, bW: bZone.w, bH: bZone.h,
+          cX: cZone.x, cY: cZone.y, cW: cZone.w, cH: cZone.h,
+        }),
+      });
+      if (res.ok) {
+        Alert.alert("저장 완료", "구역 설정이 AI 서버에 적용되었습니다.");
+        setVisible(false);
+      } else {
+        Alert.alert("오류", "서버 응답 오류입니다.");
+      }
+    } catch {
+      Alert.alert("오류", "저장 실패 — AI 서버가 실행 중인지 확인하세요.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const zoneToStyle = (zone) => ({
+    position: "absolute",
+    left:   zone.x * imgLayoutRef.current.width,
+    top:    zone.y * imgLayoutRef.current.height,
+    width:  zone.w * imgLayoutRef.current.width,
+    height: zone.h * imgLayoutRef.current.height,
+  });
+
+  const STEP_LABELS = {
+    b:    "① 거실 구역을 드래그하세요",
+    c:    "② 화장실 구역을 드래그하세요",
+    done: "구역 설정 완료",
+  };
+  const STEP_COLOR = { b: T.green, c: "#00B0FF", done: T.teal };
+
   return (
-    <Card>
-      <SectionLabel>구간 설정</SectionLabel>
-      <Text style={{ fontSize: 12, color: T.t3, marginBottom: 12, lineHeight: 18 }}>
-        구간 설정 링크를 이메일로 전송합니다.
-      </Text>
-      <Button onPress={handleSend}>구간 설정하기</Button>
-    </Card>
+    <>
+      <Card>
+        <SectionLabel>구간 설정</SectionLabel>
+        <Text style={{ fontSize: 12, color: T.t3, marginBottom: 12, lineHeight: 18 }}>
+          카메라 화면에서 거실과 화장실 구역을 직접 드래그로 설정합니다.
+        </Text>
+        <Button onPress={openSetup}>구간 설정하기</Button>
+        {!state.aiServerUrl && (
+          <Text style={{ fontSize: 11, color: T.red, marginTop: 8, textAlign: "center" }}>
+            AI 서버 주소를 먼저 입력해주세요
+          </Text>
+        )}
+      </Card>
+
+      <Modal visible={visible} animationType="slide" onRequestClose={() => setVisible(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+          {/* 헤더 */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12, borderBottomColor: T.b1, borderBottomWidth: 1 }}>
+            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>구역 설정</Text>
+            <TouchableOpacity onPress={() => setVisible(false)}>
+              <Text style={{ color: T.t3, fontSize: 14 }}>닫기</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 단계 안내 */}
+          <View style={{ backgroundColor: `${STEP_COLOR[step]}22`, paddingVertical: 10, paddingHorizontal: 16 }}>
+            <Text style={{ color: STEP_COLOR[step], fontSize: 13, fontWeight: "700", textAlign: "center" }}>
+              {STEP_LABELS[step]}
+            </Text>
+          </View>
+
+          {/* 카메라 스냅샷 + 드래그 영역 */}
+          <View style={{ flex: 1, justifyContent: "center", backgroundColor: "#000" }}>
+            <View
+              {...panResponder.panHandlers}
+              onLayout={e => {
+                const { width, height } = e.nativeEvent.layout;
+                imgLayoutRef.current = { width, height };
+              }}
+              style={{ width: "100%", aspectRatio: 4 / 3 }}
+            >
+              {snapshotUrl && (
+                <Image
+                  source={{ uri: snapshotUrl }}
+                  style={{ width: "100%", height: "100%" }}
+                  resizeMode="stretch"
+                />
+              )}
+
+              {/* 거실 구역 */}
+              {bZone && (
+                <View style={[zoneToStyle(bZone), { borderColor: T.green, borderWidth: 2, backgroundColor: "rgba(0,200,83,0.15)" }]}>
+                  <Text style={{ color: T.green, fontSize: 11, fontWeight: "700", padding: 4 }}>거실</Text>
+                </View>
+              )}
+
+              {/* 화장실 구역 */}
+              {cZone && (
+                <View style={[zoneToStyle(cZone), { borderColor: "#00B0FF", borderWidth: 2, backgroundColor: "rgba(0,176,255,0.15)" }]}>
+                  <Text style={{ color: "#00B0FF", fontSize: 11, fontWeight: "700", padding: 4 }}>화장실</Text>
+                </View>
+              )}
+
+              {/* 드래그 중인 사각형 */}
+              {dragRect && (
+                <View style={{
+                  position: "absolute",
+                  left:   Math.min(dragRect.x1, dragRect.x2),
+                  top:    Math.min(dragRect.y1, dragRect.y2),
+                  width:  Math.abs(dragRect.x2 - dragRect.x1),
+                  height: Math.abs(dragRect.y2 - dragRect.y1),
+                  borderColor: step === "b" ? T.green : "#00B0FF",
+                  borderWidth: 2,
+                  borderStyle: "dashed",
+                  backgroundColor: step === "b" ? "rgba(0,200,83,0.1)" : "rgba(0,176,255,0.1)",
+                }} />
+              )}
+            </View>
+          </View>
+
+          {/* 하단 상태 + 버튼 */}
+          <View style={{ padding: 16, gap: 12, borderTopColor: T.b1, borderTopWidth: 1, backgroundColor: T.bg1 }}>
+            <View style={{ flexDirection: "row", gap: 16 }}>
+              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: bZone ? T.green : "transparent", borderColor: T.green, borderWidth: 1 }} />
+                <Text style={{ fontSize: 12, color: bZone ? T.green : T.t3 }}>거실 {bZone ? "✓" : "미설정"}</Text>
+              </View>
+              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: cZone ? "#00B0FF" : "transparent", borderColor: "#00B0FF", borderWidth: 1 }} />
+                <Text style={{ fontSize: 12, color: cZone ? "#00B0FF" : T.t3 }}>화장실 {cZone ? "✓" : "미설정"}</Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                onPress={resetZones}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: T.r.sm, backgroundColor: T.bg3, borderColor: T.b2, borderWidth: 1, alignItems: "center" }}
+              >
+                <Text style={{ color: T.t2, fontSize: 13, fontWeight: "600" }}>다시 설정</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={saveZones}
+                disabled={!bZone || !cZone || saving}
+                style={{ flex: 2, paddingVertical: 12, borderRadius: T.r.sm, backgroundColor: bZone && cZone ? T.teal : T.bg3, alignItems: "center", opacity: saving ? 0.6 : 1 }}
+              >
+                <Text style={{ color: bZone && cZone ? "#fff" : T.t3, fontSize: 13, fontWeight: "700" }}>
+                  {saving ? "저장 중..." : "저장하기"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    </>
   );
 }
 

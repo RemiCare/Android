@@ -169,12 +169,19 @@ function camViewJsx(live, feedUrl, height = 220) {
       </View>
     );
   }
+  const html = `<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>*{margin:0;padding:0;background:#000}body{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}img{width:100%;height:100%;object-fit:cover}</style>
+</head><body><img src="${feedUrl}"></body></html>`;
+
   return (
     <View style={{ height, backgroundColor: "#000" }}>
       <WebView
-        source={{ uri: feedUrl }}
+        source={{ html, baseUrl: feedUrl }}
         style={{ flex: 1, backgroundColor: "#000" }}
         scrollEnabled={false}
+        originWhitelist={["*"]}
+        mixedContentMode="always"
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
         onError={() => {}}
@@ -363,7 +370,7 @@ export default function HomeTab() {
 
   const callAiPredict = useCallback(async () => {
     if (!state.aiServerUrl || !state.elder?.id) return;
-    const predictBase = state.aiServerUrl.replace(/:\d+$/, "") + ":8000";
+    const predictBase = state.aiServerUrl;
     try {
       const now = new Date();
       const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
