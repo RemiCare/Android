@@ -3,10 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator, Saf
 import { T } from "../tokens";
 import { useEmergency } from "../hooks/useEmergency";
 import { useApp } from "../context/AppContext";
+// expo Go에서는 외부 토큰 발급 불가능, 오류 ->임시 주석처리 import { usePushToken } from "../hooks/usePushToken";
 import HomeTab from "./HomeTab";
 import InsightsTab from "./InsightsTab";
 import SettingsTab from "./SettingsTab";
 import { ProfileTab } from "./CareAndProfile";
+
 
 const TABS = [
   { id: "home", icon: "⌂", label: "홈" },
@@ -52,6 +54,16 @@ export default function MainApp({ tab, setTab }) {
   const { state } = useApp();
   const { callOpen, callStatus, openCall, closeCall } = useEmergency();
 
+  const userId =
+    state?.user?.userId ??
+    state?.user?.id ??
+    state?.user?.uid;
+
+  console.log("[MAIN] state.user:", state?.user);
+  console.log("[MAIN] push userId:", userId);
+
+  const { pushTokenStatus } = usePushToken(userId);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -76,6 +88,12 @@ export default function MainApp({ tab, setTab }) {
           <View style={styles.emergencyDot} />
           <Text style={styles.emergencyTxt}>비상 통화</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.pushStatusBox}>
+        <Text style={styles.pushStatusText}>
+          푸시 상태: {pushTokenStatus}
+        </Text>
       </View>
 
       <View style={{ flex: 1 }}>
@@ -142,6 +160,17 @@ const styles = StyleSheet.create({
     color: T.t1,
   },
   headerSubtitle: {
+    fontSize: 11,
+    color: T.t3,
+  },
+  pushStatusBox: {
+    backgroundColor: T.bg0,
+    borderBottomColor: T.b1,
+    borderBottomWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+  },
+  pushStatusText: {
     fontSize: 11,
     color: T.t3,
   },

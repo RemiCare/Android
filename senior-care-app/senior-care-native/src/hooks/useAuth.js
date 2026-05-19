@@ -39,7 +39,20 @@ export function useAuth() {
       if (!user) throw new Error("사용자 정보를 가져올 수 없습니다.");
 
       const token = user.token;
-      login({ email: loginId, name: user.name, uid: user.userId, token });
+      const userId = user.userId ?? user.id;
+
+      console.log("[LOGIN] 로그인 응답 user:", user);
+      console.log("[LOGIN] 저장할 userId:", userId);
+
+      login({
+        id: userId,
+        userId: userId,
+        uid: String(userId),
+        email: loginId,
+        name: user.name,
+        token,
+        role: user.role,
+      });
 
       // 담당 어르신 목록 불러오기
       if (token) {
@@ -203,14 +216,20 @@ export function useAuth() {
 
     const protectorUser = loginData.results?.[0];
     const token = protectorUser?.token;
-    const protectorId = String(protectorUser?.userId ?? "");
+    const protectorId = protectorUser?.userId ?? protectorUser?.id;
+
+    console.log("[SIGNUP LOGIN] 로그인 응답 user:", protectorUser);
+    console.log("[SIGNUP LOGIN] 저장할 userId:", protectorId);
 
     // 3. 앱 로그인 처리
     login({
+      id: protectorId,
+      userId: protectorId,
+      uid: String(protectorId),
       email: userData.loginId,
       name: userData.name,
-      uid: protectorId,
       token,
+      role: protectorUser?.role,
     });
 
     // 4. 담당 어르신 목록 조회
