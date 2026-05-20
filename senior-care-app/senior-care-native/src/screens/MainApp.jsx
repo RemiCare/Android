@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator, Saf
 import { T } from "../tokens";
 import { useEmergency } from "../hooks/useEmergency";
 import { useApp } from "../context/AppContext";
+import { useNotificationListener } from "../hooks/useFcmToken";
 import HomeTab from "./HomeTab";
 import InsightsTab from "./InsightsTab";
 import SettingsTab from "./SettingsTab";
@@ -51,6 +52,7 @@ function EmergencyModal({ status, onClose }) {
 export default function MainApp({ tab, setTab }) {
   const { state } = useApp();
   const { callOpen, callStatus, openCall, closeCall } = useEmergency();
+  useNotificationListener();
 
   return (
     <SafeAreaView style={styles.container}>

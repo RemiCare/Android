@@ -30,8 +30,20 @@ function RootNavigator() {
     setScreen("login");
   };
 
-  // If context says logged in, go straight to main
-  // "signup" 예외: signUp() 내부에서 login()이 호출되더라도 완료 화면을 먼저 보여줘야 함
+  // 로그아웃 시 즉시 로그인 화면으로
+  if (!state.isLoggedIn && screen === "main") {
+    return (
+      <>
+        <StatusBar style="dark" />
+        <LoginScreen
+          onLogin={() => setScreen("main")}
+          onGoSignup={() => setScreen("signup")}
+          onGoFindAccount={() => setScreen("find-account")}
+        />
+      </>
+    );
+  }
+
   if (state.isLoggedIn && screen !== "main" && screen !== "signup") {
     return <MainApp tab={tab} setTab={setTab} />;
   }

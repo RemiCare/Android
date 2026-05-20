@@ -6,6 +6,7 @@ import { Card, SectionLabel, Pill, ProgressRing, Divider, EmptyState } from "../
 import { useVitals } from "../hooks/useVitals";
 import { useMedication } from "../hooks/useMedication";
 import { useTimeline } from "../hooks/useTimeline";
+import { useNotifications } from "../hooks/useNotifications";
 import { useApp } from "../context/AppContext";
 
 // ── Vitals Card ───────────────────────────────────────────────────
@@ -169,12 +170,19 @@ function camViewJsx(live, feedUrl, height = 220) {
       </View>
     );
   }
+  const html = `<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>*{margin:0;padding:0;background:#000}body{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}img{width:100%;height:100%;object-fit:cover}</style>
+</head><body><img src="${feedUrl}"></body></html>`;
+
   return (
     <View style={{ height, backgroundColor: "#000" }}>
       <WebView
-        source={{ uri: feedUrl }}
+        source={{ html, baseUrl: feedUrl }}
         style={{ flex: 1, backgroundColor: "#000" }}
         scrollEnabled={false}
+        originWhitelist={["*"]}
+        mixedContentMode="always"
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
         onError={() => {}}
@@ -355,6 +363,48 @@ function TimelineCard() {
   );
 }
 
+// ── Notifications Card ────────────────────────────────────────────
+function NotificationsCard() {
+  const { notifications, loading } = useNotifications();
+  const [open, setOpen] = useState(false);
+
+  const shown = open ? notifications : notifications.slice(0, 3);
+
+  function fmtTime(iso) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch { return iso; }
+  }
+
+  return (
+    <Card>
+      <SectionLabel
+        action={notifications.length > 3 ? (open ? "접기" : "더보기") : undefined}
+        onAction={notifications.length > 3 ? () => setOpen(v => !v) : undefined}
+      >
+        알림 기록
+      </SectionLabel>
+      {loading ? (
+        <Text style={{ fontSize: 12, color: T.t3, textAlign: "center", paddingVertical: 12 }}>불러오는 중...</Text>
+      ) : shown.length === 0 ? (
+        <EmptyState icon="🔔" title="알림 없음" desc="응급 알림이 발생하면 여기에 표시됩니다." />
+      ) : (
+        shown.map((n, i) => (
+          <View key={n.id} style={{ paddingVertical: 11, borderBottomColor: T.b1, borderBottomWidth: i < shown.length - 1 ? 1 : 0 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: T.red, flex: 1 }} numberOfLines={1}>{n.title}</Text>
+              <Text style={{ fontSize: 10, color: T.t3, marginLeft: 8 }}>{fmtTime(n.sentAt)}</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: T.t2, lineHeight: 18 }} numberOfLines={2}>{n.message}</Text>
+          </View>
+        ))
+      )}
+    </Card>
+  );
+}
+
 // ── HomeTab ───────────────────────────────────────────────────────
 export default function HomeTab() {
   const { state } = useApp();
@@ -363,7 +413,7 @@ export default function HomeTab() {
 
   const callAiPredict = useCallback(async () => {
     if (!state.aiServerUrl || !state.elder?.id) return;
-    const predictBase = state.aiServerUrl.replace(/:\d+$/, "") + ":8000";
+    const predictBase = state.aiServerUrl;
     try {
       const now = new Date();
       const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
@@ -422,6 +472,7 @@ export default function HomeTab() {
       {state.user?.role !== "elder" && <HomeCamCard />}
       <MedicationCard />
       <TimelineCard />
+      {state.user?.role !== "elder" && <NotificationsCard />}
 
       {/* Device status */}
       <Card>

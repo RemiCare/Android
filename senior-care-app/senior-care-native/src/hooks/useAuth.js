@@ -1,6 +1,9 @@
 import { useState, useCallback } from "react";
+import { Platform } from "react-native";
+import * as Device from "expo-device";
 import { useApp } from "../context/AppContext";
 import { BASE_URL } from "../constants";
+import { registerFcmToken } from "./useFcmToken";
 
 // 서버 어르신 → 로컬 포맷 변환
 // ElderlySimpleInfoResponse: { id, name, phoneNumber, address, birthDate, gender, loginCode? }
@@ -16,6 +19,23 @@ function serverElderToLocal(e) {
     loginCode:  e.loginCode || "",
     photo:      null,
   };
+}
+
+async function pushFcmToken(jwtToken, userId) {
+  try {
+    const expoPushToken = await registerFcmToken();
+    if (!expoPushToken) return;
+    await fetch(`${BASE_URL}/api/alarm/push-token/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwtToken}` },
+      body: JSON.stringify({
+        userId,
+        expoPushToken,
+        platform: Platform.OS,
+        deviceName: Device.deviceName || "unknown",
+      }),
+    });
+  } catch {}
 }
 
 export function useAuth() {
@@ -39,7 +59,9 @@ export function useAuth() {
       if (!user) throw new Error("사용자 정보를 가져올 수 없습니다.");
 
       const token = user.token;
-      login({ email: loginId, name: user.name, uid: user.userId, token });
+      const userId = user.userId ?? user.id;
+      login({ id: userId, userId, uid: String(userId), email: loginId, name: user.name, token, role: user.role });
+      pushFcmToken(token, userId);
 
       // 담당 어르신 목록 불러오기
       if (token) {
@@ -82,6 +104,7 @@ export function useAuth() {
       const user = data.results?.[0];
       if (!user) throw new Error("사용자 정보를 가져올 수 없습니다.");
       login({ email: loginCode, name: user.name, uid: user.userId, token: user.token, role: "elder" });
+      pushFcmToken(user.token, user.userId);
       // 어르신 본인 정보를 elders에 설정 (더미 데이터 대체)
       const birthYear = user.birthDate ? parseInt(String(user.birthDate).split('-')[0]) : 0;
       setElders([{
@@ -122,47 +145,29 @@ export function useAuth() {
     } catch { return false; }
   }, []);
 
-  // ── 통합 회원가입 (signup/combined 단일 요청) ───────────────────
+  // ── 통합 회원가입 (LegacySignUpRequest flat 구조) ──────────────
   const signUp = useCallback(async (userData) => {
     setError(""); setLoading(true);
     try {
-      const elderLoginId = `elder${userData.elderName.replace(/\s/g, "")}${Date.now().toString().slice(-4)}`;
-      // 어르신 전화번호가 없으면 고유 플레이스홀더 생성 (중복 방지)
-      const elderPhone = userData.elderPhone || `01099${Date.now().toString().slice(-6)}`;
-
       // 1. 보호자+어르신 통합 가입
-      const res = await fetch(`${BASE_URL}/api/auth/signup/combined`, {
+      const res = await fetch(`${BASE_URL}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          protector: {
-            name:        userData.name,
-            loginId:     userData.loginId,
-            email:       userData.email || `${userData.loginId}@remicare.app`,
-            password:    userData.password,
-            phoneNumber: userData.phone,
-            address:     userData.address,
-            rrn:         "000101-4000000",
-            birthDate:   "1980/01/01",
-            gender:      userData.gender || "남",
-            fcmToken:    "dummy_fcm_token",
-          },
-          elderly: {
-            name:             userData.elderName,
-            loginId:          elderLoginId,
-            email:            null,
-            password:         "Elder12345678",
-            phoneNumber:      elderPhone,
-            address:          userData.elderAddr,
-            rrn:              "000101-4000000",
-            drn:              null,
-            protectorName:    userData.name,
-            protectorContact: userData.phone,
-            protectorId:      null,
-            birthDate:        "1950/01/01",
-            gender:           userData.elderGender || "남",
-            fcmToken:         "dummy_fcm_token",
-          },
+          name:            userData.elderName,
+          loginId:         userData.loginId,
+          email:           userData.email || `${userData.loginId}@remicare.app`,
+          password:        userData.password,
+          phoneNumber:     userData.phone,
+          address:         userData.elderAddr || userData.address || "",
+          protectorName:   userData.name,
+          protectorContact: userData.phone,
+          birthDate:       "1950/01/01",
+          gender:          userData.elderGender || "남",
+          rrn:             null,
+          fcmToken:        null,
+          drn:             null,
+          role:            null,
         }),
       });
       const data = await res.json();
@@ -184,6 +189,7 @@ export function useAuth() {
 
       // 3. 앱 로그인 처리
       login({ email: userData.loginId, name: userData.name, uid: protectorId, token });
+      pushFcmToken(token, protectorId);
 
       // 4. 담당 어르신 목록 조회
       if (token) {
