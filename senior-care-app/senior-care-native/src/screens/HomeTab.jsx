@@ -372,27 +372,70 @@ export default function HomeTab() {
   const [aiResult, setAiResult] = useState(null);
 
   const callAiPredict = useCallback(async () => {
-    if (!state.aiServerUrl || !state.elder?.id) return;
-    const predictBase = state.aiServerUrl;
+    console.log("[AI SEND CHECK]", {
+      aiServerUrl: state.aiServerUrl,
+      elder: state.elder,
+      elderId: state.elder?.id,
+      heartRate: vitals.heartRate,
+      steps: vitals.steps,
+      distance: vitals.distance,
+    });
+
+    if (!state.aiServerUrl) {
+      console.log("[AI SEND SKIP] aiServerUrl이 없습니다.");
+      return;
+    }
+
+    if (!state.elder?.id) {
+      console.log("[AI SEND SKIP] elder.id가 없습니다.");
+      return;
+    }
+
     try {
       const now = new Date();
-      const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-      const res = await fetch(`${predictBase}/ai/predict`, {
+      const timestamp =
+        `${now.getFullYear()}-` +
+        `${String(now.getMonth() + 1).padStart(2, "0")}-` +
+        `${String(now.getDate()).padStart(2, "0")} ` +
+        `${String(now.getHours()).padStart(2, "0")}:` +
+        `${String(now.getMinutes()).padStart(2, "0")}`;
+
+      const payload = {
+        elderlyId: state.elder.id,
+        timestamp,
+        heartRate: vitals.heartRate ?? null,
+        steps: vitals.steps ?? null,
+        distance: vitals.distance ?? null,
+        sleepStage: null,
+        oxygenSaturation: null,
+        respiratoryRate: null,
+      };
+
+      console.log("[AI HEALTH SEND]", payload);
+
+      const res = await fetch(`${state.aiServerUrl}/ai/receive-health`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          elderlyId:           state.elder.id,
-          timestamp,
-          Heartrate:           vitals.heartRate || 72,
-          Breathrate:          16,
-          SPO2:                98, // oxygen 대신 고정값 98%로 안전 송신
-          Walking_steps:       vitals.steps     || 0,
-          Caloricexpenditure:  vitals.calories  || Math.round((vitals.steps || 0) * 0.04),
-        }),
+        body: JSON.stringify(payload),
       });
-      if (res.ok) setAiResult(await res.json());
-    } catch {}
-  }, [state.aiServerUrl, state.elder?.id, vitals.heartRate, vitals.oxygen, vitals.steps]);
+
+      const result = await res.json();
+
+      console.log("[AI HEALTH RESPONSE]", result);
+
+      if (!res.ok) {
+        console.log("[AI HEALTH SEND FAILED]", res.status, result);
+      }
+    } catch (error) {
+      console.log("[AI HEALTH SEND ERROR]", error);
+    }
+  }, [
+    state.aiServerUrl,
+    state.elder?.id,
+    vitals.heartRate,
+    vitals.steps,
+    vitals.distance,
+  ]);
 
   useEffect(() => {
     callAiPredict();

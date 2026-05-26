@@ -5,16 +5,16 @@ import { BASE_URL } from "../constants";
 export function useVitals() {
   const { state } = useApp();
   const [vitals, setVitals] = useState({
-    heartRate:     72,
-    bloodPressure: "118/76",
-    calories:      0.0,
-    steps:         0,
-    distance:      0.0,
-    respiratoryRate: 16,
-    sleepHours:    0,
-    sleepMinutes:  0,
-    status:        "normal",
-    lastUpdated:   new Date(),
+    heartRate: null,
+    bloodPressure: null,
+    calories: null,
+    steps: null,
+    distance: null,
+    respiratoryRate: null,
+    sleepHours: null,
+    sleepMinutes: null,
+    status: "normal",
+    lastUpdated: new Date(),
   });
   const [animated, setAnimated] = useState(false);
   const timerRef = useRef(null);
@@ -35,21 +35,41 @@ export function useVitals() {
       const data = await res.json();
       if (data.results?.[0]) {
         const v = data.results[0];
-        const hr = v.currentHeartRate || v.heartRateAvg || 72;
-        // 활동 칼로리 소모량 수집 매핑 (DB 필드가 null 이면 steps 기반 계산값으로 폴백)
-        const cals = v.activeCalories || Math.round((v.stepsTotal || 0) * 0.04);
+        const heartRate = v.currentHeartRate ?? v.heartRateAvg ?? null;
+        const steps = v.stepsTotal ?? null;
+        const distance = v.distance ?? null;
+
         setVitals(prev => ({
           ...prev,
-          heartRate:   hr,
-          steps:       v.stepsTotal   || 0,
-          calories:    cals,
-          distance:    v.distance     || 0.0,
-          respiratoryRate: v.respiratoryRate || 16,
-          sleepHours:  v.sleepHours   || 0,
-          sleepMinutes: v.sleepMinutes || 0,
-          status: hr > 100 ? "warning" : hr > 95 ? "caution" : "normal",
+
+          // 친구 DB에서 실제로 들어오는 항목
+          heartRate,
+          steps,
+          distance,
+
+          // 현재 데이터가 확인되지 않은 항목
+          calories: null,
+         respiratoryRate: null,
+          sleepHours: null,
+          sleepMinutes: null,
+
+          status:
+            heartRate == null
+              ? "normal"
+              : heartRate >= 130 || heartRate < 40
+                ? "warning"
+                : heartRate >= 100 || heartRate < 60
+                  ? "caution"
+                  : "normal",
+
           lastUpdated: new Date(),
         }));
+
+console.log("[VITALS FROM BACKEND]", {
+  heartRate,
+  steps,
+  distance,
+});
         flash();
       }
     } catch {
@@ -63,18 +83,18 @@ export function useVitals() {
       fetchVitals();
       timerRef.current = setInterval(fetchVitals, 10000);
     } else {
-      // 데모 모드: 랜덤 시뮬레이션
-      timerRef.current = setInterval(() => {
-        setVitals(prev => {
-          const hr  = Math.max(58, Math.min(105, Math.round(prev.heartRate + (Math.random() - 0.5) * 4)));
-          const cals = prev.calories + Math.round(Math.random() * 5); // 데모 활동 칼로리 점진 소폭 증가
-          const dist = prev.distance + (Math.random() * 0.02); // 데모 보행 거리 점진 소폭 증가 (km)
-          const resp = Math.max(14, Math.min(22, Math.round(prev.respiratoryRate + (Math.random() - 0.5) * 2))); // 데모 호흡수 안정 범위 변동
-          const status = hr > 100 ? "warning" : hr > 95 ? "caution" : "normal";
-          return { ...prev, heartRate: hr, calories: cals, distance: parseFloat(dist.toFixed(3)), respiratoryRate: resp, status, lastUpdated: new Date() };
-        });
-        flash();
-      }, 3500);
+      setVitals({
+        heartRate: null,
+        bloodPressure: null,
+        calories: null,
+        steps: null,
+        distance: null,
+        respiratoryRate: null,
+        sleepHours: null,
+        sleepMinutes: null,
+        status: "normal",
+        lastUpdated: new Date(),
+      });
     }
     return () => clearInterval(timerRef.current);
   }, [fetchVitals, state.isLoggedIn, state.user?.token]);
