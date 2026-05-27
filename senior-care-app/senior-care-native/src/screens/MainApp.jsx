@@ -48,22 +48,23 @@ function EmergencyModal({ status, onClose }) {
   );
 }
 
-function EmergencyAlertModal({ type, onCall, onClose }) {
+function EmergencyAlertModal({ type, message, onCall, onClose }) {
   const isFall = type === "fall";
+  const defaultDesc = isFall
+    ? "거실에서 어르신의 낙상(넘어짐)이 감지되었습니다! 신속한 확인이 필요합니다."
+    : "어르신이 화장실에 오랜 시간 머물고 계십니다! 이상 상태일 수 있습니다.";
   return (
     <Modal transparent animationType="fade" visible={true}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { borderColor: T.red, borderWidth: 2 }]}>
+        <View style={[styles.modalContent, { borderColor: T.red, borderWidth: 2, width: 340 }]}>
           <View style={[styles.modalIconContainer, { backgroundColor: `${T.red}18`, borderRadius: 32 }]}>
             <Text style={{ fontSize: 32 }}>🚨</Text>
           </View>
           <Text style={[styles.modalTitle, { color: T.red, fontSize: 20 }]}>
             {isFall ? "낙상 감지 경보!" : "화장실 장시간 체류 경보!"}
           </Text>
-          <Text style={[styles.modalDesc, { color: T.t1, fontWeight: "600" }]}>
-            {isFall
-              ? "거실에서 어르신의 낙상(넘어짐)이 감지되었습니다! 신속한 확인이 필요합니다."
-              : "어르신이 화장실에 오랜 시간 머물고 계십니다! 이상 상태일 수 있습니다."}
+          <Text style={[styles.modalDesc, { color: T.t1, fontWeight: "600", textAlign: "left", alignSelf: "stretch" }]}>
+            {message || defaultDesc}
           </Text>
           <View style={styles.modalButtons}>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
@@ -81,7 +82,7 @@ function EmergencyAlertModal({ type, onCall, onClose }) {
 
 export default function MainApp({ tab, setTab }) {
   const { state } = useApp();
-  const { callOpen, callStatus, openCall, closeCall, alertOpen, alertType, closeAlert } = useEmergency();
+  const { callOpen, callStatus, openCall, closeCall, alertOpen, alertType, closeAlert, alertMessage } = useEmergency();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -131,7 +132,7 @@ export default function MainApp({ tab, setTab }) {
         })}
       </View>
 
-      {alertOpen && <EmergencyAlertModal type={alertType} onCall={openCall} onClose={closeAlert} />}
+      {alertOpen && <EmergencyAlertModal type={alertType} message={alertMessage} onCall={openCall} onClose={closeAlert} />}
       {callOpen && <EmergencyModal status={callStatus} onClose={closeCall} />}
     </SafeAreaView>
   );

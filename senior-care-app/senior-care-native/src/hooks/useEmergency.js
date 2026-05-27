@@ -21,6 +21,7 @@ export function useEmergency() {
   const [callStatus, setCallStatus] = useState("idle");
   const [alertOpen,  setAlertOpen]  = useState(false);
   const [alertType,  setAlertType]  = useState(""); // "fall" | "bathroom"
+  const [alertMessage, setAlertMessage] = useState("");
   const [filter,     setFilter]     = useState("all");
   const [selectedId, setSelectedId] = useState(null);
   const [dismissed,  setDismissed]  = useState([]);
@@ -51,6 +52,7 @@ export function useEmergency() {
           const data = await res.json();
           if ((data.fall_detected || data.bathroom_alert) && !callOpenRef.current && !alertOpenRef.current) {
             setAlertType(data.fall_detected ? "fall" : "bathroom");
+            setAlertMessage(data.explanation || "");
             setAlertOpen(true);
             fetch(`${state.aiServerUrl}/api/status/reset`, { method: "POST" }).catch(() => {});
           }
@@ -69,6 +71,7 @@ export function useEmergency() {
   const closeAlert = useCallback(() => {
     setAlertOpen(false);
     setAlertType("");
+    setAlertMessage("");
   }, []);
 
   const dismissEvent = useCallback((id) => {
@@ -87,7 +90,7 @@ export function useEmergency() {
 
   return {
     callOpen, callStatus, openCall, closeCall,
-    alertOpen, alertType, closeAlert,
+    alertOpen, alertType, closeAlert, alertMessage,
     filter, setFilter,
     selectedId, toggleSelected,
     filtered, dismissEvent,

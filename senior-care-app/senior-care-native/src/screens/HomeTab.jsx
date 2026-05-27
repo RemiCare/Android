@@ -491,9 +491,24 @@ export default function HomeTab() {
         <View style={{ gap: 8, marginBottom: 12 }}>
           <TouchableOpacity 
             onPress={() => {
+              const hr = vitals.heartRate || 74;
+              const rr = vitals.respiratoryRate || 16;
+              const spo2 = vitals.oxygenSaturation || 98;
+              const name = state.elder?.name || "김순자";
+              
+              // 실제 바이탈 수치에 스파이크를 더해 비정상 수치 시뮬레이션
+              const simulatedHr = Math.max(126, hr + 45);
+              const simulatedRr = Math.max(24, rr + 7);
+              const simulatedSpo2 = Math.min(92, spo2 - 6);
+
               const mockEmergency = {
                 predictionLabel: "Emergency (비정상)",
-                explanation: "🚨 [테스트 이상 감지] 김순자 어르신의 심박수가 125 bpm으로 비정상적으로 높게 뛰고 있습니다. 평소 평균 수치(72 bpm) 대비 50% 이상 높은 급성 빈맥 상태로 즉시 방문 확인 또는 유선 연락 조치가 권장됩니다."
+                explanation: `🚨 [실시간 건강 이상 감지]\n` +
+                             `${name} 어르신의 웨어러블 생체 데이터가 급격한 이상 수치를 나타내고 있습니다.\n\n` +
+                             `• 실시간 심박수: ${simulatedHr} bpm (평소 평균 대비 50% 이상 상승, 급성 빈맥 상태)\n` +
+                             `• 실시간 호흡수: 분당 ${simulatedRr}회 (정상치 12~20회 초과, 과호흡/호흡 곤란 우려)\n` +
+                             `• 산소포화도: ${simulatedSpo2}% (정상 범위 95% 미만으로 저산소증 위험)\n\n` +
+                             `심혈관계 이상 혹은 낙상 등으로 인한 응급 상황일 가능성이 있사오니 즉시 어르신께 유선 연락을 취하시거나 방문하여 안전을 확인해 주시기 바랍니다.`
               };
               setAiResult(mockEmergency);
             }}
