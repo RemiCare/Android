@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, SafeAreaView, TextInput } from "react-native";
 import { WebView } from "react-native-webview";
 import { T } from "../tokens";
@@ -25,8 +25,8 @@ function VitalsCard() {
           {[
             { val: vitals.heartRate, unit: "bpm", label: "심박수", color: "#F06292", icon: "♥" },
             { val: vitals.steps || "0", unit: "걸음", label: "걸음수", color: T.green, icon: "◆" },
-            { val: vitals.calories || "0", unit: "kcal", label: "활동 칼로리", color: T.teal, icon: "🔥" },
-            { val: vitals.distance > 100 ? (vitals.distance / 1000.0).toFixed(2) : vitals.distance.toFixed(2), unit: "km", label: "보행 거리", color: T.blue, icon: "🛣️" },
+            { val: vitals.calories != null ? Math.round(vitals.calories) : "0", unit: "kcal", label: "활동 칼로리", color: T.teal, icon: "🔥" },
+            { val: vitals.distance != null ? (vitals.distance > 100 ? (vitals.distance / 1000.0).toFixed(2) : vitals.distance.toFixed(2)) : "0.00", unit: "km", label: "보행 거리", color: T.blue, icon: "🛣️" },
             { val: vitals.respiratoryRate || "16", unit: "회/분", label: "호흡수", color: "#8B5CF6", icon: "🫁" },
             { val: vitals.sleepHours ? vitals.sleepHours.toFixed(1) : "0.0", unit: "시간", label: "수면 시간", color: T.amber, icon: "😴" },
           ].map(v => (
@@ -407,13 +407,13 @@ export default function HomeTab() {
         steps: vitals.steps ?? null,
         distance: vitals.distance ?? null,
         sleepStage: null,
-        oxygenSaturation: null,
-        respiratoryRate: null,
+        oxygenSaturation: vitals.oxygenSaturation ?? null,
+        respiratoryRate: vitals.respiratoryRate ?? null,
       };
 
       console.log("[AI HEALTH SEND]", payload);
 
-      const res = await fetch(`${state.aiServerUrl}/ai/receive-health`, {
+      const res = await fetch(`${state.aiServerUrl}/ai/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -423,7 +423,9 @@ export default function HomeTab() {
 
       console.log("[AI HEALTH RESPONSE]", result);
 
-      if (!res.ok) {
+      if (res.ok) {
+        setAiResult(result);
+      } else {
         console.log("[AI HEALTH SEND FAILED]", res.status, result);
       }
     } catch (error) {
@@ -442,6 +444,20 @@ export default function HomeTab() {
     const id = setInterval(callAiPredict, 30000);
     return () => clearInterval(id);
   }, [callAiPredict]);
+
+  const prevEmergencyRef = useRef(false);
+
+  useEffect(() => {
+    const isCurrentlyEmergency = !!aiResult?.predictionLabel?.includes("비정상");
+    if (isCurrentlyEmergency && !prevEmergencyRef.current && aiResult?.explanation) {
+      Alert.alert(
+        "🚨 실시간 건강 이상 감지!",
+        aiResult.explanation,
+        [{ text: "확인" }]
+      );
+    }
+    prevEmergencyRef.current = isCurrentlyEmergency;
+  }, [aiResult]);
 
   const isEmergency = aiResult?.predictionLabel?.includes("비정상");
   const fallbackText = state.user?.role === "elder"
@@ -470,6 +486,55 @@ export default function HomeTab() {
         </View>
         <Text style={{ fontSize: 14, lineHeight: 24, color: T.t1 }}>{aiText}</Text>
       </View>
+
+      {state.user?.email === "demo@remicare.com" && (
+        <View style={{ gap: 8, marginBottom: 12 }}>
+          <TouchableOpacity 
+            onPress={() => {
+              const mockEmergency = {
+                predictionLabel: "Emergency (비정상)",
+                explanation: "🚨 [테스트 이상 감지] 김순자 어르신의 심박수가 125 bpm으로 비정상적으로 높게 뛰고 있습니다. 평소 평균 수치(72 bpm) 대비 50% 이상 높은 급성 빈맥 상태로 즉시 방문 확인 또는 유선 연락 조치가 권장됩니다."
+              };
+              setAiResult(mockEmergency);
+            }}
+            style={{
+              backgroundColor: "#FFF1F1", borderColor: T.red + "40", borderWidth: 1,
+              borderRadius: T.r.lg, paddingVertical: 12, alignItems: "center"
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "700", color: T.red }}>🚨 [데모 테스트] 실시간 건강 이상 알림 발생시키기</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={async () => {
+              if (!state.aiServerUrl) {
+                Alert.alert("알림", "설정 탭에서 AI 서버 주소를 먼저 설정해주세요.");
+                return;
+              }
+              try {
+                const res = await fetch(`${state.aiServerUrl}/api/status/trigger`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ type: "fall", elderlyId: state.elder?.id || 1 }),
+                });
+                if (res.ok) {
+                  console.log("[MOCK FALL TRIGGER SUCCESS]");
+                } else {
+                  Alert.alert("실패", "낙상 트리거 API 호출에 실패했습니다.");
+                }
+              } catch (err) {
+                Alert.alert("에러", "AI 서버 통신 에러가 발생했습니다.");
+              }
+            }}
+            style={{
+              backgroundColor: "#FFF1F1", borderColor: T.red + "40", borderWidth: 1,
+              borderRadius: T.r.lg, paddingVertical: 12, alignItems: "center"
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "700", color: T.red }}>🚨 [데모 테스트] 실시간 낙상 감지 경보 발생시키기</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <VitalsCard />
       {state.user?.role !== "elder" && <HomeCamCard />}

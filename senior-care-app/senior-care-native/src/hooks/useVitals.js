@@ -13,6 +13,7 @@ export function useVitals() {
     respiratoryRate: null,
     sleepHours: null,
     sleepMinutes: null,
+    oxygenSaturation: null,
     status: "normal",
     lastUpdated: new Date(),
   });
@@ -26,12 +27,14 @@ export function useVitals() {
 
   const fetchVitals = useCallback(async () => {
     const elderId = state.elder?.id;
-    if (!state.isLoggedIn || !state.user?.token || !elderId) return;
+    if (!state.isLoggedIn || !elderId) return false;
     try {
-      const res = await fetch(`${BASE_URL}/api/health/${elderId}/today`, {
-        headers: { Authorization: `Bearer ${state.user.token}` },
-      });
-      if (!res.ok) return;
+      const headers = {};
+      if (state.user?.token) {
+        headers["Authorization"] = `Bearer ${state.user.token}`;
+      }
+      const res = await fetch(`${BASE_URL}/api/health/${elderId}/today`, { headers });
+      if (!res.ok) return false;
       const data = await res.json();
       if (data.results?.[0]) {
         const v = data.results[0];
@@ -39,49 +42,61 @@ export function useVitals() {
         const steps = v.stepsTotal ?? null;
         const distance = v.distance ?? null;
 
-        setVitals(prev => ({
-          ...prev,
-
-          // 친구 DB에서 실제로 들어오는 항목
-          heartRate,
-          steps,
-          distance,
-
-          // 현재 데이터가 확인되지 않은 항목
-          calories: null,
-         respiratoryRate: null,
-          sleepHours: null,
-          sleepMinutes: null,
-
-          status:
-            heartRate == null
-              ? "normal"
-              : heartRate >= 130 || heartRate < 40
-                ? "warning"
-                : heartRate >= 100 || heartRate < 60
-                  ? "caution"
-                  : "normal",
-
-          lastUpdated: new Date(),
-        }));
-
-console.log("[VITALS FROM BACKEND]", {
-  heartRate,
-  steps,
-  distance,
-});
-        flash();
+        if (heartRate !== null || steps !== null) {
+          setVitals(prev => ({
+            ...prev,
+            heartRate,
+            steps,
+            distance,
+            calories: v.activeCalories ?? null,
+            respiratoryRate: v.respiratoryRate ?? null,
+            sleepHours: v.sleepHours ?? null,
+            sleepMinutes: v.sleepMinutes ?? null,
+            oxygenSaturation: v.oxygenSaturation ?? null,
+            status:
+              heartRate == null
+                ? "normal"
+                : heartRate >= 130 || heartRate < 40
+                  ? "warning"
+                  : heartRate >= 100 || heartRate < 60
+                    ? "caution"
+                    : "normal",
+            lastUpdated: new Date(),
+          }));
+          console.log("[VITALS FROM BACKEND]", { heartRate, steps, distance });
+          flash();
+          return true;
+        }
       }
-    } catch {
-      // 네트워크 오류 시 기존 값 유지
+    } catch (e) {
+      console.log("[fetchVitals Error]", e);
     }
+    return false;
   }, [state.isLoggedIn, state.user?.token, state.elder?.id]);
 
   useEffect(() => {
-    if (state.isLoggedIn && state.user?.token) {
-      // 백엔드 연동: 10초마다 갱신
-      fetchVitals();
-      timerRef.current = setInterval(fetchVitals, 10000);
+    if (state.isLoggedIn) {
+      const updateVitalsPipeline = async () => {
+        const fetched = await fetchVitals();
+        if (!fetched && state.user?.email === "demo@remicare.com") {
+          setVitals(prev => ({
+            ...prev,
+            heartRate: 65 + Math.floor(Math.random() * 20),
+            bloodPressure: "118/76",
+            calories: 180 + Math.floor(Math.random() * 50),
+            steps: 4200 + Math.floor(Math.random() * 1000),
+            distance: 3.1 + Math.random() * 0.5,
+            respiratoryRate: 14 + Math.floor(Math.random() * 4),
+            sleepHours: 7.2,
+            sleepMinutes: 432,
+            oxygenSaturation: 97 + Math.floor(Math.random() * 3),
+            status: "normal",
+            lastUpdated: new Date(),
+          }));
+        }
+      };
+      updateVitalsPipeline();
+      timerRef.current = setInterval(updateVitalsPipeline, 10000);
     } else {
       setVitals({
         heartRate: null,
@@ -92,12 +107,13 @@ console.log("[VITALS FROM BACKEND]", {
         respiratoryRate: null,
         sleepHours: null,
         sleepMinutes: null,
+        oxygenSaturation: null,
         status: "normal",
         lastUpdated: new Date(),
       });
     }
     return () => clearInterval(timerRef.current);
-  }, [fetchVitals, state.isLoggedIn, state.user?.token]);
+  }, [fetchVitals, state.isLoggedIn, state.user?.email]);
 
   const statusColor = { normal: "#34D399", caution: "#FBBF24", warning: "#F87171" }[vitals.status];
 

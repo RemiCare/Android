@@ -3,7 +3,7 @@ import { createContext, useContext, useReducer, useCallback } from "react";
 const AppContext = createContext(null);
 
 const INITIAL_ELDERS = [
-  { id: 1, name: "김순자", age: 78, address: "서울 마포구", conditions: ["고혈압", "당뇨", "관절염"], photo: null },
+  { id: 2, name: "김순자", age: 78, address: "서울 마포구", conditions: ["고혈압", "당뇨", "관절염"], photo: null },
 ];
 
 const DEFAULT_MEDS = [
@@ -23,11 +23,11 @@ const initialState = {
   isLoggedIn: false,
 
   elders: INITIAL_ELDERS,
-  selectedElderId: 1,
+  selectedElderId: 2,
   elder: INITIAL_ELDERS[0],
 
-  allMeds: { 1: DEFAULT_MEDS },
-  timelines: { 1: DEFAULT_TIMELINE },
+  allMeds: { 2: DEFAULT_MEDS },
+  timelines: { 2: DEFAULT_TIMELINE },
 
   vitals: {
     heartRate: 72,
@@ -47,7 +47,7 @@ const initialState = {
   notifications: [],
   unreadCount: 2,
   emergencyActive: false,
-  aiServerUrl: "",
+  aiServerUrl: "http://192.168.219.167:5000",
 };
 
 function reducer(state, action) {

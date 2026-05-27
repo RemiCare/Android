@@ -15,7 +15,31 @@ function useHealthHistory() {
 
   const fetchHistory = useCallback(async () => {
     const elderId = state.elder?.id;
-    if (!state.isLoggedIn || !state.user?.token || !elderId) return;
+    if (!state.isLoggedIn || !elderId) return;
+
+    if (!state.user?.token) {
+      if (state.user?.email === "demo@remicare.com") {
+        // 데모 모드용 30일치 데이터 시뮬레이션
+        const mockHist = Array.from({ length: 30 }, (_, i) => {
+          const dateObj = new Date();
+          dateObj.setDate(dateObj.getDate() - (29 - i));
+          const recordDate = dateObj.toISOString().split("T")[0];
+          
+          return {
+            recordDate,
+            distance: 2.5 + Math.random() * 2.0, // 2.5 ~ 4.5 km
+            respiratoryRate: 14 + Math.floor(Math.random() * 4), // 14 ~ 18
+            activeCalories: 150 + Math.floor(Math.random() * 150), // 150 ~ 300 kcal
+            stepsTotal: 3000 + Math.floor(Math.random() * 5000), // 3000 ~ 8000 steps
+            heartRateAvg: 70 + Math.floor(Math.random() * 10),
+            sleepHours: 6.0 + Math.random() * 2.0,
+          };
+        });
+        setHistory(mockHist);
+      }
+      return;
+    }
+
     try {
       const res = await fetch(`${BASE_URL}/api/health/${elderId}/history`, {
         headers: { Authorization: `Bearer ${state.user.token}` },
@@ -24,7 +48,7 @@ function useHealthHistory() {
       const data = await res.json();
       setHistory(data.results || []);
     } catch {}
-  }, [state.isLoggedIn, state.user?.token, state.elder?.id]);
+  }, [state.isLoggedIn, state.user?.token, state.user?.email, state.elder?.id]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
@@ -42,7 +66,20 @@ function useLifestyleInsights() {
 
   const fetchInsights = useCallback(async () => {
     const elderId = state.elder?.id;
-    if (!state.isLoggedIn || !state.user?.token || !elderId) return;
+    if (!state.isLoggedIn || !elderId) return;
+
+    if (!state.user?.token) {
+      if (state.user?.email === "demo@remicare.com") {
+        setInsights({
+          sleepRegularity: 84,
+          outingFrequency: 68,
+          mealRegularity: 92,
+          aiBriefingText: "어르신의 최근 일주일 수면 규칙성이 84%로 매우 양호하며 깊은 수면 비중이 적정합니다. 보행 활동량(일평균 6,200걸음) 역시 연령대 대비 준수하여 실외 외출 주기가 안정적입니다. 식사 전후의 자율신경 안정 상태도 매우 건강하게 유지되고 있습니다."
+        });
+      }
+      return;
+    }
+
     try {
       const res = await fetch(`${BASE_URL}/api/health/insights/${elderId}`, {
         headers: { Authorization: `Bearer ${state.user.token}` },
@@ -53,7 +90,7 @@ function useLifestyleInsights() {
         setInsights(Array.isArray(data.results) ? data.results[0] : data.results);
       }
     } catch {}
-  }, [state.isLoggedIn, state.user?.token, state.elder?.id]);
+  }, [state.isLoggedIn, state.user?.token, state.user?.email, state.elder?.id]);
 
   useEffect(() => { fetchInsights(); }, [fetchInsights]);
 
